@@ -1,0 +1,11 @@
+{
+  "pdfjs-dist": "6.4.299",
+  "pdf-lib": "1.17.1",
+  "sources": {
+    "pdfjs/pdf.mjs": "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.mjs",
+    "pdfjs/pdf.worker.mjs": "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.worker.mjs",
+    "pdf-lib.min.js": "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js",
+    "pdfjs/LICENSE": "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/LICENSE",
+    "pdf-lib.LICENSE": "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/LICENSE.md"
+  }
+}

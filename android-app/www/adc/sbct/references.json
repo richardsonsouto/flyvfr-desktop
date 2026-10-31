@@ -1,0 +1,13 @@
+{
+  "icao": "SBCT",
+  "edition": "2610A1",
+  "image": "adc/sbct/chart.png",
+  "source": "https://aisweb.decea.gov.br/download/?arquivo=140b981b-29f6-4910-a8bf55ad3bcb5f84&apikey=1587263166",
+  "basis": "Visually reviewed taxiway lettering on ADC page 1. These are label references, NOT surveyed stopbar positions.",
+  "pageSize": [413.858, 623.622],
+  "taxiwayLabels": [
+    {"ident": "C", "pdfCenter": [289.8935623495, 166.42589581675]},
+    {"ident": "E", "pdfCenter": [187.825395257, 273.07227939125]},
+    {"ident": "F", "pdfCenter": [113.16347294, 341.8977903085]}
+  ]
+}

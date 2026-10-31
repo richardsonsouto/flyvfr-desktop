@@ -1,0 +1,86 @@
+/* extras.css — complementos (vídeo da página inicial, ícone da Escala RPL, ajustes do celular) */
+.rs-rpl-info[hidden]{display:none!important}
+.lp-video{background:linear-gradient(180deg,#0C1424,var(--lp-night));color:#fff}
+.lp-video .lp-in{padding-block:72px 80px;display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center;gap:14px}
+.lp-video h2{margin:0 0 18px;font-size:clamp(1.6rem,3.2vw,2.5rem);color:#fff;max-width:900px}
+.lp-vid-frame{position:relative;width:100%;max-width:1100px;aspect-ratio:16/9;border-radius:20px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,.10);box-shadow:0 40px 90px -30px rgba(0,0,0,.8),0 0 120px -40px rgba(245,197,24,.35)}
+.lp-vid{display:block;width:100%;height:100%;max-width:100%;object-fit:cover;background:#000}
+.lp-vid-play{position:absolute;inset:0;margin:auto;width:92px;height:92px;border-radius:50%;border:0;background:var(--lp-acc,#f5c518);color:#141413;display:grid;place-items:center;cursor:pointer;box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 0 10px rgba(245,197,24,.18);transition:transform .2s}
+.lp-vid-play:hover{transform:scale(1.07)}
+.lp-vid-play svg{width:40px;height:40px;margin-left:5px}
+.lp-vid-play[hidden]{display:none}
+.lp-vid-note{margin:6px 0 0;font-size:.78rem;color:#6F7E95}
+@media (max-width:900px){.lp-hero-in{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.lp-video .lp-in{padding-block:48px 56px}.lp-vid-frame{border-radius:14px}.lp-vid-play{width:68px;height:68px}.lp-vid-play svg{width:30px;height:30px}}
+@media (max-width:560px){.lp .lp-ctas:has(.lp-btn.win){display:grid;grid-template-columns:minmax(0,1fr);width:100%}}
+/* Frota (fleetview.js): totais, filtros numa fileira, linhas de uma altura com colunas, grupos por modelo, resumo no livro técnico */
+.fv-kpis{display:flex;gap:10px;flex-wrap:wrap;margin:2px 0 4px}
+.fv-kpi{border:1px solid var(--line);border-radius:10px;padding:8px 14px;background:var(--sheet);min-width:112px;display:flex;flex-direction:column}
+.fv-kpi b{font-size:1.45rem;font-family:var(--f-display);line-height:1.1}
+.fv-kpi span{font-size:.76rem;color:var(--muted)}
+.fv-kpi.ok b{color:var(--ok,#2c8a4a)}.fv-kpi.fly b{color:light-dark(#1d5ea8,#8cb9ef)}.fv-kpi.res b{color:light-dark(#8a5a00,#e5c579)}.fv-kpi.bad b{color:var(--bad,#b8452e)}
+.fv-filters{flex-wrap:wrap;gap:8px}
+.fv-filters select{width:auto;max-width:260px}
+.fv-filters input[type=search]{flex:1 1 200px;min-width:160px}
+.fv-al{display:inline-flex;align-items:center;gap:6px}.fv-al .al-sym{width:24px;height:24px;margin:0}
+.ftable{container-type:inline-size;container-name:ftable}
+.ftable .fvrow,.ftable .fv-head{display:grid;grid-template-columns:26px minmax(130px,auto) minmax(110px,.9fr) minmax(96px,auto) minmax(0,1.7fr) 104px 128px;grid-template-areas:"fav reg type pos last hist st";align-items:center;column-gap:12px;row-gap:2px;padding:6px 10px;font-size:.86rem}
+.ftable .fv-head{padding:2px 10px 6px;font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+.ftable .fvrow>.fav{grid-area:fav}.ftable .fvrow .fr-reg{grid-area:reg;overflow:visible;gap:6px}.ftable .fvrow .fr-type{grid-area:type}.ftable .fvrow .fr-pos{grid-area:pos}.ftable .fr-last{grid-area:last}.ftable .fr-hist{grid-area:hist}.ftable .fr-st{grid-area:st}
+.ftable .fvrow .fr-reg .sym-slot:empty{display:none}
+.ftable .fvrow .fr-reg .sym-slot,.ftable .fvrow .fr-reg .al-sym{width:24px;height:24px}
+.ftable .fvrow .fr-type b{font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftable .fvrow .fr-type .muted{font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftable .fvrow .fr-pos .loc{font-size:.8rem;padding:3px 8px}
+.ftable .fr-last{min-width:0;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftable .fr-hist{font-size:.74rem;color:var(--muted);white-space:nowrap}
+.ftable .fr-st .pill{font-size:.64rem;padding:3px 8px;white-space:nowrap}
+.fv-ok{font-size:.76rem;color:var(--ok,#2c8a4a);white-space:nowrap}.fv-ok::before{content:"● "}
+.pill.fv-fly{background:light-dark(#e5effa,#1d3550);color:light-dark(#1d5ea8,#a9cdf5)}
+.pill.fv-res{background:light-dark(#fff3d6,#4a3a12);color:light-dark(#8a5a00,#f0d27a)}
+.pill.fv-new{background:light-dark(#eceae6,#33312d);color:light-dark(#5b5750,#c9c4ba)}
+.fv-grp{display:flex;gap:10px;align-items:baseline;padding:12px 10px 4px;border-bottom:1px solid var(--line)}
+.fv-grp b{font-family:var(--f-display);font-size:1rem}.fv-grp .muted{font-size:.78rem}
+.fv-facts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fv-facts>div{background:var(--sunk);border-radius:8px;padding:7px 10px;min-width:0}
+.fv-facts span{display:block;font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.fv-facts b{display:block;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fv-facts b.fv-good{color:var(--ok,#2c8a4a)}
+@container ftable (max-width:900px){
+ .ftable .fv-head{display:none}
+ .ftable .fvrow{grid-template-columns:26px auto minmax(0,1fr) auto auto;grid-template-areas:"fav reg type pos st" ". . last last hist";padding:7px 8px}
+ .ftable .fr-last{white-space:normal}
+}
+@container ftable (max-width:560px){
+ .ftable .fvrow{grid-template-columns:26px auto minmax(0,1fr);grid-template-areas:"fav reg type" ". pos st" ". last last" ". hist hist";row-gap:4px}
+ .ftable .fvrow .fr-pos,.ftable .fr-st{justify-self:start}
+}
+/* Sala de briefing › Voo rastreado: "Como conectar o seu simulador" aberto cabe na mesma página (sem ir para a página 2) */
+.brf-tracking-help>.trk-help[open]{column-count:2;column-gap:28px;padding:8px 12px}
+.brf-tracking-help>.trk-help[open]>summary{column-span:all;margin-bottom:4px}
+.brf-tracking-help .trk-help ol,.brf-tracking-help .trk-help ul{margin:4px 0 0;padding-left:18px;gap:3px;line-height:1.35;font-size:.72rem}
+.brf-tracking-help .trk-help li{break-inside:avoid}
+.brf-tracking-help .trk-help h4{margin:8px 0 0;font-size:.78rem;break-after:avoid}
+.brf-tracking-help .trk-help .simulator-icon{width:16px;height:16px;vertical-align:-3px}
+@media(max-width:700px){.brf-tracking-help>.trk-help[open]{column-count:1}}
+/* Sala de briefing › Aeronave: links das pinturas da matrícula */
+.brf-extra-liv{margin:6px 0 4px}
+.brf-extra-liv .liv h3{font-size:1rem;margin:0 0 4px!important}
+.brf-extra-liv .liv-list{max-width:620px}
+/* Catálogo de falhas: menu de botões por capítulo ATA */
+.cv-menu{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.cv-ata{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:var(--sheet);color:inherit;font-size:.8rem;cursor:pointer;max-width:260px}
+.cv-ata b.mono{font-size:.82rem}
+.cv-ata .cv-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cv-ata .cv-n{font-size:.7rem;color:var(--muted);background:var(--sunk);border-radius:999px;padding:1px 7px}
+.cv-ata:hover{border-color:var(--accent)}
+.cv-ata[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#111}
+.cv-ata[aria-pressed="true"] .cv-n{background:rgba(0,0,0,.12);color:#111}
+.cv-ata:disabled{opacity:.4;cursor:default}
+.cv-head{align-items:flex-end;gap:12px;flex-wrap:wrap}
+.cv-search{margin:0;flex-direction:row!important;align-items:center;flex-wrap:nowrap}.cv-search input{min-width:260px}
+.cv-intro{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:6px 28px;align-items:start;margin:0}
+.cv-intro p{margin:0;max-width:none}
+@media(max-width:900px){.cv-intro{grid-template-columns:1fr}}
+.cv-search .muted{white-space:nowrap}
+/* Mapa: painel "Ao vivo (rastreados)" removido a pedido */
+.map-screen .map-side{display:none!important}

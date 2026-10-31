@@ -1,0 +1,17 @@
+{
+  "name": "virtual-flight-report-android",
+  "version": "2.0.0",
+  "description": "App Android nativo do Virtual Flight Report (Capacitor): as telas vão dentro do APK; os dados vêm do Supabase.",
+  "scripts": {
+    "sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.6.10",
+    "@capacitor/cli": "^7.6.10",
+    "@capacitor/core": "^7.6.10",
+    "@supabase/supabase-js": "^2.45.4",
+    "leaflet": "^1.9.4",
+    "qrcodejs": "^1.0.0"
+  },
+  "private": true
+}

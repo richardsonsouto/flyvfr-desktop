@@ -1,0 +1,882 @@
+{
+  "retrieved": "2026-10-21",
+  "airports": {
+    "SBAE": {
+      "icao": "SBAE",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBAE&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SBAQ": {
+      "icao": "SBAQ",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBAQ&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbaq/catalogue.json"
+    },
+    "SBAR": {
+      "icao": "SBAR",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBAR&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbar/catalogue.json"
+    },
+    "SBAT": {
+      "icao": "SBAT",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBAT&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbat/catalogue.json"
+    },
+    "SBAU": {
+      "icao": "SBAU",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBAU&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbau/catalogue.json"
+    },
+    "SBAX": {
+      "icao": "SBAX",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBAX&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SBBE": {
+      "icao": "SBBE",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBBE&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbbe/catalogue.json"
+    },
+    "SBBR": {
+      "icao": "SBBR",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBBR&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SBBV": {
+      "icao": "SBBV",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBBV&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbbv/catalogue.json"
+    },
+    "SBBW": {
+      "icao": "SBBW",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBBW&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbbw/catalogue.json"
+    },
+    "SBCA": {
+      "icao": "SBCA",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBCA&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbca/catalogue.json"
+    },
+    "SBCF": {
+      "icao": "SBCF",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBCF&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbcf/catalogue.json"
+    },
+    "SBCG": {
+      "icao": "SBCG",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBCG&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbcg/catalogue.json"
+    },
+    "SBCH": {
+      "icao": "SBCH",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBCH&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbch/catalogue.json"
+    },
+    "SBCJ": {
+      "icao": "SBCJ",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBCJ&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SBCN": {
+      "icao": "SBCN",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBCN&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbcn/catalogue.json"
+    },
+    "SBCR": {
+      "icao": "SBCR",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBCR&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbcr/catalogue.json"
+    },
+    "SBCT": {
+      "icao": "SBCT",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBCT&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbct/catalogue.json"
+    },
+    "SBCX": {
+      "icao": "SBCX",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBCX&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbcx/catalogue.json"
+    },
+    "SBCY": {
+      "icao": "SBCY",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBCY&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbcy/catalogue.json"
+    },
+    "SBCZ": {
+      "icao": "SBCZ",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBCZ&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbcz/catalogue.json"
+    },
+    "SBDB": {
+      "icao": "SBDB",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBDB&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Chart does not contain airport reference"
+    },
+    "SBDN": {
+      "icao": "SBDN",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBDN&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbdn/catalogue.json"
+    },
+    "SBEG": {
+      "icao": "SBEG",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBEG&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbeg/catalogue.json"
+    },
+    "SBFI": {
+      "icao": "SBFI",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBFI&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbfi/catalogue.json"
+    },
+    "SBFL": {
+      "icao": "SBFL",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBFL&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SBFN": {
+      "icao": "SBFN",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBFN&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbfn/catalogue.json"
+    },
+    "SBFZ": {
+      "icao": "SBFZ",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBFZ&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SBGL": {
+      "icao": "SBGL",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBGL&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbgl/catalogue.json"
+    },
+    "SBGO": {
+      "icao": "SBGO",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBGO&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbgo/catalogue.json"
+    },
+    "SBGR": {
+      "icao": "SBGR",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBGR&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbgr/catalogue.json"
+    },
+    "SBGV": {
+      "icao": "SBGV",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBGV&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SBHT": {
+      "icao": "SBHT",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBHT&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbht/catalogue.json"
+    },
+    "SBIH": {
+      "icao": "SBIH",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBIH&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SBIL": {
+      "icao": "SBIL",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBIL&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbil/catalogue.json"
+    },
+    "SBIP": {
+      "icao": "SBIP",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBIP&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SBIZ": {
+      "icao": "SBIZ",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBIZ&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbiz/catalogue.json"
+    },
+    "SBJA": {
+      "icao": "SBJA",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBJA&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbja/catalogue.json"
+    },
+    "SBJE": {
+      "icao": "SBJE",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBJE&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbje/catalogue.json"
+    },
+    "SBJP": {
+      "icao": "SBJP",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBJP&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbjp/catalogue.json"
+    },
+    "SBJU": {
+      "icao": "SBJU",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBJU&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbju/catalogue.json"
+    },
+    "SBJV": {
+      "icao": "SBJV",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBJV&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SBKG": {
+      "icao": "SBKG",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBKG&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbkg/catalogue.json"
+    },
+    "SBKP": {
+      "icao": "SBKP",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBKP&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbkp/catalogue.json"
+    },
+    "SBLE": {
+      "icao": "SBLE",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBLE&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SBLO": {
+      "icao": "SBLO",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBLO&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sblo/catalogue.json"
+    },
+    "SBMA": {
+      "icao": "SBMA",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBMA&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbma/catalogue.json"
+    },
+    "SBMD": {
+      "icao": "SBMD",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBMD&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SBMG": {
+      "icao": "SBMG",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBMG&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbmg/catalogue.json"
+    },
+    "SBMK": {
+      "icao": "SBMK",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBMK&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbmk/catalogue.json"
+    },
+    "SBML": {
+      "icao": "SBML",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBML&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbml/catalogue.json"
+    },
+    "SBMO": {
+      "icao": "SBMO",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBMO&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbmo/catalogue.json"
+    },
+    "SBMQ": {
+      "icao": "SBMQ",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBMQ&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbmq/catalogue.json"
+    },
+    "SBMS": {
+      "icao": "SBMS",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBMS&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbms/catalogue.json"
+    },
+    "SBMY": {
+      "icao": "SBMY",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBMY&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SBNF": {
+      "icao": "SBNF",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBNF&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbnf/catalogue.json"
+    },
+    "SBNM": {
+      "icao": "SBNM",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBNM&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbnm/catalogue.json"
+    },
+    "SBOI": {
+      "icao": "SBOI",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBOI&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SBPA": {
+      "icao": "SBPA",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBPA&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbpa/catalogue.json"
+    },
+    "SBPB": {
+      "icao": "SBPB",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBPB&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbpb/catalogue.json"
+    },
+    "SBPF": {
+      "icao": "SBPF",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBPF&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SBPJ": {
+      "icao": "SBPJ",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBPJ&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbpj/catalogue.json"
+    },
+    "SBPK": {
+      "icao": "SBPK",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBPK&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbpk/catalogue.json"
+    },
+    "SBPL": {
+      "icao": "SBPL",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBPL&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbpl/catalogue.json"
+    },
+    "SBPP": {
+      "icao": "SBPP",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBPP&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbpp/catalogue.json"
+    },
+    "SBPS": {
+      "icao": "SBPS",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBPS&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbps/catalogue.json"
+    },
+    "SBPV": {
+      "icao": "SBPV",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBPV&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbpv/catalogue.json"
+    },
+    "SBRB": {
+      "icao": "SBRB",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBRB&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbrb/catalogue.json"
+    },
+    "SBRF": {
+      "icao": "SBRF",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBRF&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbrf/catalogue.json"
+    },
+    "SBRJ": {
+      "icao": "SBRJ",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBRJ&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbrj/catalogue.json"
+    },
+    "SBRP": {
+      "icao": "SBRP",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBRP&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbrp/catalogue.json"
+    },
+    "SBSG": {
+      "icao": "SBSG",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBSG&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbsg/catalogue.json"
+    },
+    "SBSJ": {
+      "icao": "SBSJ",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBSJ&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbsj/catalogue.json"
+    },
+    "SBSL": {
+      "icao": "SBSL",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBSL&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbsl/catalogue.json"
+    },
+    "SBSM": {
+      "icao": "SBSM",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBSM&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbsm/catalogue.json"
+    },
+    "SBSN": {
+      "icao": "SBSN",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBSN&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbsn/catalogue.json"
+    },
+    "SBSP": {
+      "icao": "SBSP",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBSP&i=aerodromos",
+      "checked": "2026-10-27",
+      "status": "ready",
+      "catalogue": "adc/sbsp/catalogue.json"
+    },
+    "SBSR": {
+      "icao": "SBSR",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBSR&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SBSV": {
+      "icao": "SBSV",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBSV&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbsv/catalogue.json"
+    },
+    "SBTB": {
+      "icao": "SBTB",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBTB&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SBTC": {
+      "icao": "SBTC",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBTC&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbtc/catalogue.json"
+    },
+    "SBTE": {
+      "icao": "SBTE",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBTE&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbte/catalogue.json"
+    },
+    "SBTF": {
+      "icao": "SBTF",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBTF&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbtf/catalogue.json"
+    },
+    "SBTT": {
+      "icao": "SBTT",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBTT&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbtt/catalogue.json"
+    },
+    "SBTU": {
+      "icao": "SBTU",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBTU&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbtu/catalogue.json"
+    },
+    "SBUA": {
+      "icao": "SBUA",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBUA&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbua/catalogue.json"
+    },
+    "SBUG": {
+      "icao": "SBUG",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBUG&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbug/catalogue.json"
+    },
+    "SBUL": {
+      "icao": "SBUL",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBUL&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbul/catalogue.json"
+    },
+    "SBUR": {
+      "icao": "SBUR",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBUR&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbur/catalogue.json"
+    },
+    "SBVC": {
+      "icao": "SBVC",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBVC&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbvc/catalogue.json"
+    },
+    "SBVG": {
+      "icao": "SBVG",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBVG&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SBVH": {
+      "icao": "SBVH",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBVH&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbvh/catalogue.json"
+    },
+    "SBVT": {
+      "icao": "SBVT",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBVT&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SBZM": {
+      "icao": "SBZM",
+      "source": "https://aisweb.decea.mil.br/?codigo=SBZM&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sbzm/catalogue.json"
+    },
+    "SDOW": {
+      "icao": "SDOW",
+      "source": "https://aisweb.decea.mil.br/?codigo=SDOW&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SIMK": {
+      "icao": "SIMK",
+      "source": "https://aisweb.decea.mil.br/?codigo=SIMK&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SJZA": {
+      "icao": "SJZA",
+      "source": "https://aisweb.decea.mil.br/?codigo=SJZA&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNAB": {
+      "icao": "SNAB",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNAB&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNBR": {
+      "icao": "SNBR",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNBR&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNCL": {
+      "icao": "SNCL",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNCL&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNCP": {
+      "icao": "SNCP",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNCP&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SNDT": {
+      "icao": "SNDT",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNDT&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNDV": {
+      "icao": "SNDV",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNDV&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNEB": {
+      "icao": "SNEB",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNEB&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNGI": {
+      "icao": "SNGI",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNGI&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sngi/catalogue.json"
+    },
+    "SNGN": {
+      "icao": "SNGN",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNGN&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNHS": {
+      "icao": "SNHS",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNHS&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNJM": {
+      "icao": "SNJM",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNJM&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNJR": {
+      "icao": "SNJR",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNJR&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNLN": {
+      "icao": "SNLN",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNLN&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNPD": {
+      "icao": "SNPD",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNPD&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNSM": {
+      "icao": "SNSM",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNSM&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "unavailable",
+      "reason": "Georeference fit requires review"
+    },
+    "SNSS": {
+      "icao": "SNSS",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNSS&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNTO": {
+      "icao": "SNTO",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNTO&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNTS": {
+      "icao": "SNTS",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNTS&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNVS": {
+      "icao": "SNVS",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNVS&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SNZR": {
+      "icao": "SNZR",
+      "source": "https://aisweb.decea.mil.br/?codigo=SNZR&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SSGY": {
+      "icao": "SSGY",
+      "source": "https://aisweb.decea.mil.br/?codigo=SSGY&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SSKW": {
+      "icao": "SSKW",
+      "source": "https://aisweb.decea.mil.br/?codigo=SSKW&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/sskw/catalogue.json"
+    },
+    "SSOU": {
+      "icao": "SSOU",
+      "source": "https://aisweb.decea.mil.br/?codigo=SSOU&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SSUM": {
+      "icao": "SSUM",
+      "source": "https://aisweb.decea.mil.br/?codigo=SSUM&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SSUV": {
+      "icao": "SSUV",
+      "source": "https://aisweb.decea.mil.br/?codigo=SSUV&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SSVL": {
+      "icao": "SSVL",
+      "source": "https://aisweb.decea.mil.br/?codigo=SSVL&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SWBC": {
+      "icao": "SWBC",
+      "source": "https://aisweb.decea.mil.br/?codigo=SWBC&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SWBR": {
+      "icao": "SWBR",
+      "source": "https://aisweb.decea.mil.br/?codigo=SWBR&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SWGN": {
+      "icao": "SWGN",
+      "source": "https://aisweb.decea.mil.br/?codigo=SWGN&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "ready",
+      "catalogue": "adc/swgn/catalogue.json"
+    },
+    "SWKO": {
+      "icao": "SWKO",
+      "source": "https://aisweb.decea.mil.br/?codigo=SWKO&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SWLB": {
+      "icao": "SWLB",
+      "source": "https://aisweb.decea.mil.br/?codigo=SWLB&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SWMW": {
+      "icao": "SWMW",
+      "source": "https://aisweb.decea.mil.br/?codigo=SWMW&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SWPI": {
+      "icao": "SWPI",
+      "source": "https://aisweb.decea.mil.br/?codigo=SWPI&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    },
+    "SWYN": {
+      "icao": "SWYN",
+      "source": "https://aisweb.decea.mil.br/?codigo=SWYN&i=aerodromos",
+      "checked": "2026-10-21",
+      "status": "no-adc"
+    }
+  }
+}

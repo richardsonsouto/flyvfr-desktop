@@ -1,0 +1,209 @@
+{
+  "icao": "SBSP",
+  "retrieved": "2026-10-27",
+  "chart": {
+    "image": "adc/sbsp/chart.png",
+    "source": "https://aisweb.decea.gov.br/download/?arquivo=94aaf7b1-09d9-4616-88585e529b9342ea&apikey=1587263166",
+    "aerodromeSource": "https://aisweb.decea.mil.br/?codigo=SBSP&i=aerodromos",
+    "effective": "2026-10-27 (consulta)",
+    "edition": "2610A1",
+    "nativeGeoreference": {
+      "gpts": [
+        -23.6391,
+        -46.6645,
+        -23.6392,
+        -46.6465,
+        -23.6142,
+        -46.6464,
+        -23.6142,
+        -46.6644
+      ],
+      "lpts": [
+        0.1,
+        0.1,
+        0.9,
+        0.1,
+        0.9,
+        0.9,
+        0.1,
+        0.9
+      ],
+      "bbox": [
+        0.0,
+        0.00490833,
+        413.858,
+        623.617
+      ]
+    },
+    "controls": [
+      {
+        "u": 0.1,
+        "v": 0.8999929163300552,
+        "ll": [
+          -23.6391,
+          -46.6645
+        ],
+        "xy": [
+          -5194668.378122714,
+          2709492.1344120805
+        ]
+      },
+      {
+        "u": 0.8999999999999999,
+        "v": 0.8999929163300552,
+        "ll": [
+          -23.6392,
+          -46.6465
+        ],
+        "xy": [
+          -5192664.627288436,
+          2709504.286014799
+        ]
+      },
+      {
+        "u": 0.8999999999999999,
+        "v": 0.09999921292556169,
+        "ll": [
+          -23.6142,
+          -46.6464
+        ],
+        "xy": [
+          -5192653.495339356,
+          2706466.6741377185
+        ]
+      },
+      {
+        "u": 0.1,
+        "v": 0.09999921292556169,
+        "ll": [
+          -23.6142,
+          -46.6644
+        ],
+        "xy": [
+          -5194657.246173635,
+          2706466.6741377185
+        ]
+      }
+    ],
+    "transform": {
+      "dx": [
+        2504.6885428529363,
+        7.594751695929085
+      ],
+      "dy": [
+        -13.91504587046802,
+        3789.4499204428867
+      ],
+      "origin": [
+        -5194906.323534285,
+        2706083.934752404
+      ],
+      "min": [
+        -5194920.238580155,
+        2706083.934752404
+      ],
+      "max": [
+        -5192401.634991432,
+        2709880.979424543
+      ],
+      "viewBox": [
+        2518.6035887235776,
+        3797.044672138989
+      ],
+      "bounds": [
+        [
+          -23.642299910473458,
+          -46.66676250098384
+        ],
+        [
+          -23.611049659179457,
+          -46.64413749999996
+        ]
+      ],
+      "fitResidualMercatorMetres": 3.037900682538748
+    },
+    "calibrationReview": {
+      "source": "https://aisweb.decea.gov.br/download/?arquivo=94aaf7b1-09d9-4616-88585e529b9342ea&apikey=1587263166",
+      "edition": "2610A1",
+      "maxResidualMercatorMetres": 4,
+      "basis": "Reviewed native GeoPDF controls rounded to 0.0001 degree; affine residual retained without changing coordinates."
+    }
+  },
+  "surfaces": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "kind": "runway",
+          "ident": "17L/35R",
+          "airport_pk": 521.0
+        },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -46.6581,
+                -23.6202
+              ],
+              [
+                -46.6502,
+                -23.6316
+              ],
+              [
+                -46.6506,
+                -23.6318
+              ],
+              [
+                -46.6585,
+                -23.6204
+              ],
+              [
+                -46.6581,
+                -23.6202
+              ]
+            ]
+          ]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "kind": "runway",
+          "ident": "17R/35L",
+          "airport_pk": 521.0
+        },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -46.6512,
+                -23.6346
+              ],
+              [
+                -46.6612,
+                -23.6203
+              ],
+              [
+                -46.6608,
+                -23.6201
+              ],
+              [
+                -46.6509,
+                -23.6344
+              ],
+              [
+                -46.6512,
+                -23.6346
+              ]
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  "geometrySource": "https://geoaisweb.decea.mil.br/geoserver/ICA/wfs?service=WFS&version=1.0.0&request=GetFeature&typeName=ICA:runway_v2&outputFormat=application/json&srsName=EPSG:4326&bbox=-46.66676250098384,-23.642299910473458,-46.64413749999996,-23.611049659179457",
+  "taxiwaysVerified": false
+}

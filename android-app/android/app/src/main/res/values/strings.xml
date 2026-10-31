@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Virtual Flight Report</string>
+    <string name="title_activity_main">Virtual Flight Report</string>
+    <string name="package_name">dev.pages.virtual_flight_report.twa</string>
+    <string name="custom_url_scheme">dev.pages.virtual_flight_report.twa</string>
+</resources>
