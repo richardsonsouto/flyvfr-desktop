@@ -38,13 +38,14 @@ jobs:
             desktop-app/dist/latest.yml
           if-no-files-found: error
 
-      - name: Publicar a versão (tag vX.Y.Z) para a atualização automática
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publicar a versão nova (quando o package.json traz uma versão ainda não publicada)
+        if: github.ref == 'refs/heads/android-app' || startsWith(github.ref, 'refs/tags/v')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          V="${GITHUB_REF_NAME#v}"
-          test "$(node -p "require('./package.json').version")" = "$V" || { echo "::error::package.json não está na versão $V"; exit 1; }
-          gh release create "$GITHUB_REF_NAME" dist/VirtualFlightReport-Desktop-Setup-$V.exe dist/VirtualFlightReport-Desktop-Setup-$V.exe.blockmap dist/latest.yml \
-            --repo "$GITHUB_REPOSITORY" --title "Virtual Flight Report $V" --notes "Telas do app atualizadas: cores da companhia escolhida para voar, cartões de embarque e linha do tempo na Escala, menu Análise de reportes, foto real da aeronave, regra de posição da frota e Manual atualizado nos 8 idiomas." --latest
+          V="$(node -p "require('./package.json').version")"
+          if gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo "v$V já publicada: nada a fazer."; exit 0; fi
+          gh release create "v$V" dist/VirtualFlightReport-Desktop-Setup-$V.exe dist/VirtualFlightReport-Desktop-Setup-$V.exe.blockmap dist/latest.yml \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Virtual Flight Report $V" --latest \
+            --notes "Telas do app atualizadas: cores da companhia escolhida para voar, cartões de embarque e linha do tempo na Escala, menu Análise de reportes, foto real da aeronave, regra de posição da frota e Manual atualizado nos 8 idiomas."

@@ -21,4 +21,4 @@ A internet continua sendo usada para os dados compartilhados (Supabase, ADS-B, m
 1. Atualize as telas: `python3 android-app/sync-www.py <pasta app>` (vale para o Android e o Windows).
 2. Aumente `"version"` no `package.json` (ex.: 3.1.1) e envie para o GitHub.
 3. O GitHub Actions (aba **Actions → App Windows**) gera `VirtualFlightReport-Desktop-Setup-X.Y.Z.exe`, o `.blockmap` e o `latest.yml` em **Artifacts**.
-4. Para a atualização automática dos usuários: Releases → Draft a new release → tag vX.Y.Z → anexe os 3 arquivos → Publish release.
+4. Atualização automática: ao enviar para o ramo `android-app` uma versão do `package.json` que ainda não foi publicada, o Actions cria a release vX.Y.Z com os 3 arquivos e os programas instalados se atualizam sozinhos.
