@@ -277,3 +277,6 @@
 /* Mapa: títulos dos grupos na caixa de camadas */
 .leaflet-control-layers .ms-group{margin:8px 0 3px;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#5b6472}
 .leaflet-control-layers .ms-group:first-child{margin-top:2px}
+/* Cartão de embarque: a companhia aparece uma vez só (o logotipo; o nome em texto só se o logotipo não carregar) */
+.bpc-top .reg-tag .sym-slot{display:none}
+.bpc-top .al-sym+.bpc-al{display:none}
