@@ -18,3 +18,22 @@ if(typeof render==="function"){const rvRender=render;render=function(){const r=r
   try{if(view==="support"){const qr=document.getElementById("pix-qr"),panel=qr&&qr.closest(".panel"),root=document.getElementById("view");
     if(panel&&root&&root.lastElementChild!==panel){panel.classList.add("sup-pix-end");root.append(panel)}}}catch(e){}
   return r}}
+/* Rastreio em andamento: o aviso sai do corpo da página e vira um selo compacto ao lado do nome do menu */
+function trkTopChip(){const top=document.querySelector(".top-in"),title=document.getElementById("page-title");if(!top||!title)return;
+  top.querySelector(".trk-top")?.remove();const b=document.querySelector("#view .trk-banner");if(!b)return;
+  const r=typeof trkRes==="function"?trkRes():null,btn=b.querySelector("[data-action='trk-open']");if(!r||!btn)return;
+  const on=typeof TRK!=="undefined"&&TRK.status==="connected",txt=(b.querySelector("span")?.textContent||"").replace(/^✈\s*/,"");b.remove();
+  const el=document.createElement("div");el.className="trk-top"+(on?" on":"");el.setAttribute("role","status");el.title=txt;
+  el.innerHTML=`<span class="trk-top-dot" aria-hidden="true"></span><span class="trk-top-txt">${esc(txt)}</span><b class="trk-top-route mono">✈ ${esc(r.dep)} → ${esc(r.arr)}</b>`;
+  btn.className="btn small trk-top-btn";el.append(btn);title.after(el);top.classList.add("has-trk")}
+if(typeof render==="function"){const ttRender=render;render=function(){const r=ttRender.apply(this,arguments);try{trkTopChip()}catch(e){}return r}}
+/* Ordem dos menus pela jornada do piloto: meu voo (planejar → voar → registrar), depois consulta, depois ajuda */
+const NAV_ORDER=[["roster","bookings","briefing","logbook","reviews"],["fleet","map","events","catalog"],["manual","support","admin"]];
+function navReorder(){const tabs=document.getElementById("tabs");if(!tabs)return;tabs.querySelectorAll(".tab-sep").forEach(s=>s.remove());
+  const all=[...tabs.querySelectorAll(":scope>.tab[data-view]")],known=NAV_ORDER.flat(),used=new Set(),frag=document.createDocumentFragment();
+  NAV_ORDER.forEach((group,gi)=>{const items=group.map(v=>all.find(b=>b.dataset.view===v)).filter(Boolean);
+    if(gi===1)all.forEach(b=>{if(!known.includes(b.dataset.view))items.push(b)});
+    if(!items.length)return;if(frag.childNodes.length){const s=document.createElement("span");s.className="tab-sep";s.setAttribute("aria-hidden","true");frag.append(s)}
+    items.forEach(b=>{used.add(b);frag.append(b)})});
+  tabs.prepend(frag)}
+if(typeof paintChrome==="function"){const noPaint=paintChrome;paintChrome=function(){const r=noPaint.apply(this,arguments);try{navReorder()}catch(e){}return r}}

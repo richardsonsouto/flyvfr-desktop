@@ -239,3 +239,41 @@
 .brf-extra .rs-acphoto{margin:4px 0 14px}
 /* Apoie: Pix no final da página, na largura toda */
 .sup-pix-end{margin-top:16px}
+/* Sala de briefing: sem "Página 1/2" — cada submenu mostra tudo numa página; o quadro rola por dentro quando o conteúdo passa da altura da tela */
+.brf-fit-pages{display:none!important}
+.brf-viewport .brf-subpanel>.panel,.brf-viewport .brf-subpanel>.brf-weather-compact,.brf-viewport .brf-subpanel>.briefing-flight-panel{overflow-y:auto;overscroll-behavior:contain}
+.brf-viewport .brf-fit-detail-original{display:revert!important}
+.brf-fit-reader{max-height:none!important;overflow:visible!important}.brf-fit-read{display:none!important}
+.brf-viewport .brf-weather-dashboard,.brf-viewport .rwx-dashboard,.brf-viewport .ntc-dashboard{overflow-y:auto}
+/* NOTAM: o selo "No horário do voo" fica na mesma linha de "Ler NOTAM" e o cartão nunca fica menor que o conteúdo */
+.brf-workspace.brf-viewport .ntc-flip .ntc-card{grid-template-columns:30px minmax(0,1fr) auto;grid-template-rows:30px minmax(20px,auto) 17px 20px}
+.ntc-flip .ntc-card>strong,.ntc-flip .ntc-card>.ntc-id{grid-column:1/-1}
+.ntc-flip .ntc-card>.ntc-label{grid-column:2/-1}
+.ntc-flip .ntc-card>small{grid-column:1/3;grid-row:4;align-self:center}
+.ntc-flip .ntc-flight-badge{grid-column:3;grid-row:4;align-self:center;justify-self:end;white-space:nowrap;line-height:1.3}
+.brf-workspace.brf-viewport .ntc-flip-picker .ntc-grid{grid-template-rows:repeat(var(--ntc-rows,2),minmax(128px,1fr));flex:1 0 auto}
+
+/* Selo do rastreio no cabeçalho, ao lado do nome do menu */
+.top-in.has-trk .page-title{margin-right:0;white-space:nowrap}
+.trk-top{display:flex;flex-wrap:nowrap;justify-content:flex-start;align-items:center;gap:8px;min-width:0;flex:0 1 auto;margin-right:auto;padding:3px 3px 3px 10px;border:1px solid color-mix(in srgb,#b7791f 45%,var(--line));border-radius:999px;background:light-dark(#fbf0d9,#3a3020);color:light-dark(#7a4a0c,#f3d9a4);font-size:.78rem;line-height:1.2}
+.trk-top.on{border-color:color-mix(in srgb,#2f8f5b 45%,var(--line));background:light-dark(#e6f5ec,#1f3529);color:light-dark(#1d5e3a,#a9e3c2)}
+.trk-top-dot{flex:none;width:8px;height:8px;border-radius:50%;background:#d08a1c;box-shadow:0 0 0 3px color-mix(in srgb,#d08a1c 25%,transparent)}
+.trk-top.on .trk-top-dot{background:#2f9e60;box-shadow:0 0 0 3px color-mix(in srgb,#2f9e60 25%,transparent)}
+.trk-top-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trk-top-route{display:none;white-space:nowrap;font-size:.76rem}
+.trk-top .trk-top-btn{flex:none;min-height:26px;padding:3px 12px;border-radius:999px;font-size:.76rem;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@media (max-width:1499px){.trk-top-txt{display:none}.trk-top-route{display:inline}}
+@media (max-width:520px){.top-in.has-trk{flex-wrap:wrap;row-gap:6px}.top-in.has-trk .trk-top{order:5;flex-basis:100%;justify-content:flex-start}.trk-top .trk-top-btn{margin-left:auto}}
+@media (max-width:1499px){.trk-top{flex-shrink:0}}
+.trk-top .trk-top-btn{white-space:nowrap}
+@media (min-width:900px) and (max-width:1150px){.top-in.has-trk .clock{display:none}}
+
+/* Separadores discretos entre os grupos de menus */
+.tab-sep{flex:none;display:block;height:1px;margin:6px 12px;background:var(--side-line);opacity:.9}
+:root[data-layout="top"] .tab-sep,:root[data-layout="bottom"] .tab-sep{width:1px;height:auto;align-self:stretch;margin:8px 4px}
+@media (max-width:899px){.tab-sep{width:1px;height:auto;align-self:stretch;margin:6px 4px}}
+@media (min-width:900px){:root[data-layout="left"] .tab-sep,:root[data-layout="right"] .tab-sep{margin:6px 8px}}
+
+/* Mapa: títulos dos grupos na caixa de camadas */
+.leaflet-control-layers .ms-group{margin:8px 0 3px;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#5b6472}
+.leaflet-control-layers .ms-group:first-child{margin-top:2px}

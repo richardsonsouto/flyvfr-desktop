@@ -9,5 +9,6 @@
   b=ins(b,"m-perfil",blk(u.perfil));b=ins(b,"m-escala",blk(u.escala));b=ins(b,"m-frota",blk(u.frota));
   b=ins(b,"m-reporte",u.reporte);b=ins(b,"m-brief",u.brief);
   b=b.replace(/(<section id="m-faq">[\s\S]*?)(<\/tbody>)/,(m,a,c)=>a+u.faq.map(([q,r])=>`<tr><td>${q}</td><td>${r}</td></tr>`).join("")+c);
+  {const R={"pt": ["Cartas, Plano de voo e Checklist do briefing", "Cartas e Plano de voo"], "en": ["Charts, Flight plan and Briefing checklist", "Charts and Flight plan"], "es": ["Cartas, Plan de vuelo y Lista del briefing", "Cartas y Plan de vuelo"], "fr": ["Cartes, Plan de vol et Checklist du briefing", "Cartes et Plan de vol"], "de": ["Karten, Flugplan und Briefing-Checkliste", "Karten und Flugplan"], "ja": ["飛行計画、ブリーフィング・チェックリスト。", "飛行計画。"], "zh": ["航图、飞行计划和简报检查单", "航图和飞行计划"], "ko": ["비행 계획, 브리핑 체크리스트.", "비행 계획."]}[k];if(R)b=b.split(R[0]).join(R[1])}
   M.body=b;M.upd2=true}
 })();

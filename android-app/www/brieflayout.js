@@ -2,30 +2,13 @@
 const BRF_LAYOUT_PAGES=new WeakMap();
 let brfLayoutFrame=0,brfLayoutBusy=false;
 function brfLayoutSchedule(){if(brfLayoutBusy)return;cancelAnimationFrame(brfLayoutFrame);brfLayoutFrame=requestAnimationFrame(brfLayoutFit)}
-function brfLayoutPager(host,items,capacity){
- if(!host||!items.length)return;
- let state=BRF_LAYOUT_PAGES.get(host);
- if(!state||state.items.length!==items.length||state.items.some((el,i)=>el!==items[i])){
-  host.querySelector(':scope>.brf-fit-pages')?.remove();
-  state={items,page:0,capacity,nav:document.createElement('div')};
-  state.nav.className='brf-fit-pages';state.nav.setAttribute('role','group');
-  state.nav.innerHTML='<button type="button" class="btn small" data-fit-step="-1">‹</button><span aria-live="polite"></span><button type="button" class="btn small" data-fit-step="1">›</button>';
-  host.append(state.nav);BRF_LAYOUT_PAGES.set(host,state);
- }
- state.capacity=capacity;const groups=Array.isArray(capacity)?capacity:Array.from({length:Math.ceil(items.length/Math.max(1,capacity))},(_,i)=>items.slice(i*capacity,(i+1)*capacity));state.pages=groups.length;state.page=Math.min(state.page,state.pages-1);
- items.forEach(el=>el.classList.toggle('brf-fit-hidden',!groups[state.page]?.includes(el)));
- state.nav.hidden=state.pages<=1;
- state.nav.querySelector('span').textContent=t('brf_fit_page',{n:state.page+1,total:state.pages});
- const buttons=state.nav.querySelectorAll('button');buttons[0].disabled=state.page===0;buttons[1].disabled=state.page===state.pages-1;
- buttons[0].setAttribute('aria-label',t('brf_fit_previous'));buttons[1].setAttribute('aria-label',t('brf_fit_next'));
+/* Sem paginação: tudo o que o submenu mostra fica numa única página (o quadro rola por dentro quando precisa).
+   brfLayoutPager e brfLayoutReadMore continuam existindo porque outras partes os chamam, mas só garantem que tudo apareça. */
+function brfLayoutPager(host,items){
+ if(!host)return;host.querySelector(':scope>.brf-fit-pages')?.remove();BRF_LAYOUT_PAGES.delete(host);
+ (items||[]).forEach(el=>el.classList.remove('brf-fit-hidden'));
 }
-function brfLayoutReadMore(el){
- if(el.dataset.fitReader||el.scrollHeight<110)return;
- el.dataset.fitReader='1';el.classList.add('brf-fit-reader');
- const button=document.createElement('button');button.type='button';button.className='btn small brf-fit-read';button.textContent=t('brf_fit_read');
- button.addEventListener('click',()=>openSheet('form',head(t('brf_title'),t('brf_fit_read'))+'<div class="brf-fit-reading">'+el.outerHTML+'</div>'));
- el.after(button);
-}
+function brfLayoutReadMore(){}
 function brfLayoutFit(){
  if(view!=='briefing'||BRF.printing)return;
  const workspace=document.querySelector('.brf-workspace'),panel=workspace?.querySelector('.brf-subpanel:not([hidden])');if(!panel)return;
@@ -62,7 +45,7 @@ function brfLayoutFit(){
    select.addEventListener('change',()=>buttons[Number(select.value)]?.click());pages.append(select);
   }
   panel.querySelectorAll('.wx-raw,.brf-ofp-text,.notam-mode-original,.ntm-e,.rwx-decoded pre,.bc-guidance p.mono').forEach(brfLayoutReadMore);
-  for(const detail of panel.querySelectorAll('.ntc-detail,.rwx-detail')){
+  for(const detail of (false?panel.querySelectorAll('.ntc-detail,.rwx-detail'):[])){
    if(detail.dataset.fitDetail)continue;detail.dataset.fitDetail='1';detail.classList.add('brf-fit-detail-original');
    const button=document.createElement('button');button.type='button';button.className='btn small brf-fit-read';button.textContent=t('brf_fit_read');
    button.addEventListener('click',()=>openSheet('form',head(t('brf_title'),t('brf_fit_read'))+'<div class="brf-fit-reading">'+detail.outerHTML.replace('brf-fit-detail-original','')+'</div>'));detail.after(button);
@@ -115,3 +98,5 @@ window.addEventListener('resize',brfLayoutSchedule);window.visualViewport?.addEv
 new MutationObserver(records=>{if(!brfLayoutBusy&&records.some(r=>r.type==='childList'&&!r.target.closest?.('.brf-fit-pages,.mv-item')))brfLayoutSchedule()}).observe(document.getElementById('view'),{childList:true,subtree:true});
 window.addEventListener('beforeprint',()=>{document.querySelector('.brf-workspace')?.classList.remove('brf-viewport');document.querySelectorAll('.brf-fit-hidden').forEach(el=>el.classList.remove('brf-fit-hidden'))});
 window.addEventListener('afterprint',brfLayoutSchedule);
+/* Checklist do briefing removido: quem tinha a seção salva volta para Voo */
+if(typeof render==="function"){const blRender=render;render=function(){if(typeof BRF!=="undefined"&&BRF.section==="checklist")BRF.section="flight";return blRender.apply(this,arguments)}}
