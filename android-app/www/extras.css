@@ -73,7 +73,7 @@
 .cv-ata .cv-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cv-ata .cv-n{font-size:.7rem;color:var(--muted);background:var(--sunk);border-radius:999px;padding:1px 7px}
 .cv-ata:hover{border-color:var(--accent)}
-.cv-ata[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#111}
+.cv-ata[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,#111)}
 .cv-ata[aria-pressed="true"] .cv-n{background:rgba(0,0,0,.12);color:#111}
 .cv-ata:disabled{opacity:.4;cursor:default}
 .cv-head{align-items:flex-end;gap:12px;flex-wrap:wrap}
@@ -84,3 +84,158 @@
 .cv-search .muted{white-space:nowrap}
 /* Mapa: painel "Ao vivo (rastreados)" removido a pedido */
 .map-screen .map-side{display:none!important}
+.fa-field{display:flex;flex-direction:column;gap:6px}
+.fa-field[hidden]{display:none}
+.fa-label{font-weight:600;font-size:.9rem}
+.fa-pick .fa-btn{width:100%!important;max-width:none!important;justify-content:flex-start}
+.fa-pick .fa-btn .alpick-caret{margin-left:auto}
+.fa-pop{left:0;right:auto;width:100%;max-width:none}
+.fa-list{max-height:300px}
+.fa-grp{font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:8px 8px 2px}
+.fa-o[aria-selected="true"]{background:var(--accent-soft)}
+.fa-pick{display:block;width:100%}
+.fa-sym{position:relative;width:24px!important;height:24px;flex:0 0 24px!important;border-radius:50%;display:inline-grid;place-items:center;background:var(--fa-bg);color:var(--fa-fg);font-size:.56rem;letter-spacing:0;overflow:hidden}
+.fa-sym b{font-weight:800}
+.fa-sym .al-sym{position:absolute;inset:0;width:100%!important;height:100%!important;margin:0;object-fit:contain;opacity:0}
+.fa-sym.ok{background:#fff}.fa-sym.ok b{display:none}.fa-sym.ok .al-sym{opacity:1}
+/* favorita: filtro dos voos RPL na Escala */
+.fa-rpl-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 10px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--accent-soft);font-size:.85rem}
+.fa-rpl-bar>span:not(.fa-sym){flex:1 1 auto;min-width:0}
+.fa-rpl-bar .btn{margin-left:auto;white-space:nowrap}
+.fa-rpl-none{padding:10px 12px;border:1px dashed var(--line);border-radius:10px;margin-bottom:8px}.fa-rpl-none p{margin:0;font-size:.88rem}
+/* Manual: texto justificado ocupando toda a largura do quadro */
+.manual{max-width:none}
+.manual p,.manual ol,.manual ul{max-width:none}
+@media(min-width:700px){.manual p,.manual li{text-align:justify;text-justify:inter-word;hyphens:auto;-webkit-hyphens:auto}.manual td p,.manual td{text-align:left}}
+/* Frota: colunas com largura fixa (todas as linhas alinhadas); "Onde está" em destaque (chip azul + cidade); "Escolher voo" como botão na cor do app */
+@container ftable (min-width:901px){.ftable .fvrow,.ftable .fv-head{grid-template-columns:26px 170px minmax(110px,.9fr) 170px minmax(0,1.7fr) 104px 128px}}
+.ftable .fvrow .fr-pos{display:flex;flex-direction:column;align-items:center;gap:3px;justify-self:center;align-self:center;min-width:0;max-width:170px}
+@container ftable (min-width:561px) and (max-width:900px){
+ .ftable .fvrow{grid-template-columns:26px 170px minmax(0,1fr) 170px 150px;grid-template-areas:"fav reg type pos st" ". . last pos hist"}
+ .ftable .fvrow .fr-st,.ftable .fvrow .fr-hist{justify-self:end}
+}
+@container ftable (max-width:560px){.ftable .fvrow .fr-pos{align-items:flex-start;justify-self:start}}
+.ftable .fvrow .fr-pos .loc:not(.loc-choose):not(.loc-next){font-size:1.05rem;padding:6px 14px;border-radius:10px}
+.ftable .fvrow .fr-pos .loc:not(.loc-choose):not(.loc-next):not(.fly):not(.real){border:2px solid light-dark(#1d5ea8,#8cb9ef);background:light-dark(#e5effa,#1d3550);color:light-dark(#123f73,#d6e7fb)}
+.ftable .fvrow .fv-city{font:600 .74rem var(--f-body);color:light-dark(#1d5ea8,#a9cdf5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.loc.loc-choose{background:var(--accent);border:1px solid var(--accent);color:var(--accent-ink,#1b1b1b);font-weight:700;border-radius:999px;padding:5px 14px}
+.loc.loc-choose:hover:not(:disabled){filter:brightness(.95)}
+.ftable .fvrow .fr-pos .loc.loc-choose{padding:5px 14px}
+/* companhia favorita: opção de usar as cores da companhia nos menus */
+.fa-colors{display:flex;gap:8px;align-items:flex-start;margin-top:4px;cursor:pointer;font-weight:400}
+.fa-colors input{width:18px;height:18px;margin:2px 0 0;flex:none;accent-color:var(--accent)}
+.fa-colors b{display:block;font-size:.9rem}.fa-colors small{display:block;margin-top:2px}
+/* Frota (lista): layout final — todas as linhas com as mesmas colunas e a mesma altura em cada largura de tela */
+.ftable .fvrow .fr-type{min-width:0}
+.ftable .fvrow .fr-type b,.ftable .fvrow .fr-type .muted{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftable .fvrow .fr-pos{min-height:52px;justify-content:center}
+.ftable .fvrow .fr-pos .loc:not(.loc-choose):not(.loc-next){font-size:1rem;padding:4px 12px}
+@container ftable (min-width:901px){
+ .ftable .fvrow,.ftable .fv-head{grid-template-columns:26px 150px minmax(150px,1fr) 160px minmax(0,1.2fr) 96px 128px;grid-template-areas:"fav reg type pos last hist st"}
+ .ftable .fvrow{min-height:66px}
+}
+@container ftable (min-width:701px) and (max-width:900px){
+ .ftable .fvrow{grid-template-columns:26px 150px minmax(0,1fr) 150px 128px;grid-template-areas:"fav reg type pos st" ". . last pos hist";min-height:72px}
+ .ftable .fvrow .fr-st,.ftable .fvrow .fr-hist{justify-self:end}
+ .ftable .fr-last{white-space:nowrap}
+}
+@container ftable (max-width:700px){
+ .ftable .fvrow{grid-template-columns:26px 150px minmax(0,1fr) 124px;grid-template-areas:"fav reg type st" ". pos last last" ". pos hist hist";row-gap:2px;min-height:110px;align-content:center}
+ .ftable .fvrow .fr-pos{justify-self:start;align-items:center}
+ .ftable .fvrow .fr-st{justify-self:end}
+ .ftable .fvrow .fr-last,.ftable .fvrow .fr-hist{align-self:center}
+ .ftable .fr-last{white-space:normal}
+}
+/* filtro da favorita na Escala RPL: a faixa ocupa a largura toda, acima do voo e da aeronave */
+.rs-rpl-pair>.fa-rpl-bar{grid-column:1/-1}
+.fa-rpl-bar{flex-wrap:nowrap}
+.fa-rpl-bar>span:not(.fa-sym){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Escala: cartão de embarque por voo + linha do tempo do dia */
+.bpc{display:flex;background:var(--sheet);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-height:150px;box-shadow:0 1px 4px rgba(0,0,0,.05);color:var(--ink)}
+.bpc-band{width:10px;flex:none;background:linear-gradient(var(--bpc-a),var(--bpc-b))}
+.bpc-main{flex:1;min-width:0;padding:12px 20px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 22px;align-items:center}
+.bpc-top{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:.82rem;color:var(--muted)}
+.bpc-top .al-sym{width:22px;height:22px;margin:0}
+.bpc-al{color:var(--bpc-t);font-weight:800}
+.bpc-ap{display:flex;flex-direction:column;gap:1px;min-width:0}.bpc-ap.r{align-items:flex-end;text-align:right}
+.bpc-city{font-size:.82rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.bpc-code{font-family:var(--f-display);font-weight:800;font-size:2.5rem;letter-spacing:.06em;line-height:1;color:var(--ink);cursor:help}
+.bpc-time{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.bpc-time b{font-size:1.15rem}.bpc-time small{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.bpc-z{font-family:var(--f-mono);font-size:.85rem;color:var(--muted)}
+.bpc-mid{display:flex;flex-direction:column;align-items:center;gap:11px;min-width:0;font-size:.8rem;color:var(--muted);text-align:center}
+.bpc-line{display:block;width:100%;height:2px;background:repeating-linear-gradient(90deg,var(--line) 0 8px,transparent 8px 14px);position:relative;font-style:normal}
+.bpc-line b{position:absolute;left:50%;top:50%;transform:translate(-50%,-55%);color:var(--bpc-t);font-size:1.05rem;background:var(--sheet);padding:0 4px}
+.bpc-route{font-size:.72rem;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bpc-stub{width:190px;flex:none;border-left:2px dashed var(--line);padding:12px 16px;position:relative;display:flex;flex-direction:column;justify-content:center;gap:2px;font-size:.85rem}
+.bpc-stub::before,.bpc-stub::after{content:"";position:absolute;left:-10px;width:18px;height:18px;border-radius:50%;background:var(--bg);border:1px solid var(--line)}
+.bpc-stub::before{top:-10px}.bpc-stub::after{bottom:-10px}
+.bpc-stub .k{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.bpc-fn{font-family:var(--f-display);font-size:1.6rem;font-weight:800;color:var(--bpc-t);line-height:1.05;white-space:nowrap}
+.bpc .mx-st{font-weight:700;font-size:.82rem}
+.bpc.st-done{opacity:.72}
+.bpc.ferry .bpc-band{background:repeating-linear-gradient(45deg,var(--bpc-a) 0 6px,var(--bpc-b) 6px 12px)}
+.sct{padding:6px 2px 2px;margin:0 0 10px}
+.sct-row{position:relative;height:38px;border-radius:8px;background:var(--sunk)}
+.sct-seg{position:absolute;top:0;bottom:0;display:flex;align-items:center;padding:0 7px;font-size:.74rem;white-space:nowrap;overflow:hidden;box-sizing:border-box;border-radius:8px;min-width:4px}
+.sct-seg span{overflow:hidden;text-overflow:ellipsis}
+.sct-seg.fly{background:var(--bpc-a);color:var(--bpc-i);font-weight:700;border:1px solid rgba(0,0,0,.08)}
+.sct-seg.fly em{font-style:normal;font-weight:400;opacity:.85;margin-left:4px}
+.sct-seg.gnd{background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(127,127,127,.14) 6px 12px);color:var(--muted);justify-content:center}
+.sct-seg.rep,.sct-seg.rel{color:var(--muted);justify-content:center}
+.sct-now{position:absolute;top:-6px;bottom:-4px;border-left:2px solid var(--bad,#b42318);font-style:normal}
+.sct-now span{position:absolute;top:-12px;left:3px;font-size:.62rem;color:var(--bad,#b42318);text-transform:uppercase;letter-spacing:.06em}
+.sct-axis{position:relative;height:16px}.sct-tick{position:absolute;top:2px;transform:translateX(-50%);font-size:.66rem;color:var(--muted);font-family:var(--f-mono)}
+@media(max-width:760px){
+ .bpc{flex-direction:column}.bpc-band{width:auto;height:8px;background:linear-gradient(90deg,var(--bpc-a),var(--bpc-b))}
+ .bpc-main{grid-template-columns:1fr 1fr;padding:12px 14px}.bpc-mid{grid-column:1/-1;order:3}
+ .bpc-code{font-size:2rem}
+ .bpc-stub{width:auto;border-left:0;border-top:2px dashed var(--line);flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+ .bpc-stub::before,.bpc-stub::after{display:none}
+ .sct-seg.fly em{display:none}
+}
+
+/* Escala RPL: voo de início e aeronave lado a lado, mesma largura e mesma altura, mesmo estilo de caixa */
+@media(min-width:1100px){.rs-form-screen .rs-rpl-pair{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.rs-form-screen .rs-rpl-pair .rs-pf-options>summary.rs-pf-selected,.rs-form-screen .rs-rpl-pair .rs-pf-single,.rs-form-screen .rs-rpl-pair .acp-btn{
+ width:100%;max-width:none;min-width:0;height:72px;min-height:72px;box-sizing:border-box;margin:0;
+ display:flex;flex-wrap:nowrap;align-items:center;gap:12px;padding:10px 14px;
+ border:1px solid var(--line);border-radius:10px;background:var(--sheet);box-shadow:none}
+.rs-form-screen .rs-rpl-pair .rs-pf-options>summary.rs-pf-selected .rs-pf-card-body,.rs-form-screen .rs-rpl-pair .rs-pf-single .rs-pf-card-body{flex:1;min-width:0}
+.rs-form-screen .rs-rpl-pair .rs-pf-caret,.rs-form-screen .rs-rpl-pair .acp-caret{margin-left:auto;flex:none;color:var(--muted)}
+.rs-form-screen .rs-rpl-pair .rs-ac>.lbl{min-height:24px}
+/* foto real da aeronave escolhida */
+.rs-acphoto{display:flex;align-items:center;gap:14px;margin-top:12px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--sheet)}
+.rs-acphoto .ac-img{width:132px;flex:none;margin:0}
+.rs-acphoto .ac-img img{width:132px;height:74px;object-fit:cover;border-radius:6px;display:block}
+.rs-acphoto .ac-img svg{width:132px;height:auto}
+.rs-acphoto .ac-img .credit{display:block;font-size:.66rem;color:var(--muted);margin-top:2px}
+.rs-acphoto>div{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:.86rem}
+.rs-acphoto a{font-weight:600;color:var(--accent-text,var(--ink));text-decoration:underline;text-underline-offset:3px}
+.rs-form-screen .rs-rpl-pair .rs-pf-caret{font-size:0;line-height:1}.rs-form-screen .rs-rpl-pair .rs-pf-caret::after{content:"▾";font-size:.8rem}
+/* Análise de reportes (menu próprio): lista compacta, sem repetir o título da página */
+#report-review-panel>.row:first-child{justify-content:flex-end!important}
+#report-review-panel>.row:first-child h3{display:none}
+#report-review-panel>article{display:grid;gap:6px;padding:12px 16px;margin:10px 0 0;box-shadow:none}
+#report-review-panel>article p{margin:0}
+#report-review-panel>article .chip,#report-review-panel>article .btn{justify-self:start}
+.rv-intro{margin:0 0 4px}
+
+/* contraste garantido em qualquer paleta e com as cores da companhia favorita */
+.brf-station-options>.btn[aria-pressed=true]{color:var(--accent-ink,#111);border-color:var(--accent)}
+.cv-ata[aria-pressed="true"] .cv-n{color:inherit;background:rgba(127,127,127,.28)}
+.loc.fly{color:var(--ink)}
+.bfp-pass .bfp-route-play{color:var(--ink)}
+.bell-n{background:#C4321F;color:#fff}
+/* foto real: sempre na largura toda da área de voo/aeronave (Escala livre e RPL) */
+.rs-acphoto{grid-column:1/-1;width:100%;box-sizing:border-box}
+.rs-acphoto>div{flex:1}
+/* Escala: aviso da partida (último voo / companhia que não opera ali) na largura toda */
+.rs-acf>.sd-note{grid-column:1/-1;margin:0}
+.sd-note>span:not(.fa-sym):not([aria-hidden]){white-space:normal}
+.sd-note{justify-content:flex-start}.sd-note>span:not(.fa-sym){flex:1 1 auto;text-align:left;white-space:normal}.sd-note>span[aria-hidden]{flex:0 0 auto}
+.app-ver{font-size:.72rem;color:var(--side-muted,var(--muted));margin:6px 0 0;font-family:var(--f-mono)}
+/* Sala de briefing › Aeronave: foto real logo abaixo da matrícula, no mesmo padrão da Escala */
+.brf-extra .rs-acphoto{margin:4px 0 14px}
+/* Apoie: Pix no final da página, na largura toda */
+.sup-pix-end{margin-top:16px}

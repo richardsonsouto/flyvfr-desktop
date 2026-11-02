@@ -113,6 +113,8 @@ viewFleet=function(){
    ${list.length>shown.length?`<button class="btn more" data-action="more">${t("show_more",{n:Math.min(60,list.length-shown.length)})} · ${t("showing",{a:shown.length,b:list.length})}</button>`:""}`}`;
 };
 
+/* cidade do aeródromo onde a aeronave está parada (abaixo do código) */
+function fvCity(id){if(flyingNow(id)||movingNow(id))return"";const p=posNow(id),A=p&&typeof AIRPORTS!=="undefined"&&AIRPORTS?AIRPORTS[p]:null;return A&&A[4]?`<small class="fv-city">${esc(A[4])}</small>`:""}
 fleetSplit=function(list,shown){
   if(!list.length)return`<p class="muted">${t("no_match")}</p>`;
   if(!selAc||!list.some(a=>a.id===selAc))selAc=list[0].id;
@@ -121,7 +123,7 @@ fleetSplit=function(list,shown){
     return`<div class="frow fvrow s-${s.key}${a.id===selAc?" sel":""}" role="button" tabindex="0" data-action="open-aircraft" data-id="${esc(a.id)}" aria-pressed="${a.id===selAc}">
       ${favBtn(a.id)}<span class="fr-reg"><span class="sym-slot">${showAl?alSym(a.airline):""}</span><span class="plate al-plate${plLen(a.registration)}"${plateStyle(a.airline)}>${esc(a.registration)}</span></span>
       <span class="fr-type"><b>${esc(a.type)}</b>${showAl?`<span class="muted">${esc(a.airline||"")}</span>`:""}</span>
-      <span class="mono fr-pos">${posChip(a.id)}</span>
+      <span class="mono fr-pos">${posChip(a.id)}${fvCity(a.id)}</span>
       <span class="fr-last">${fvLine(a,s,v,S)}</span>
       <span class="mono fr-hist">${esc(fvHist(a,S))}</span>
       <span class="fr-st">${fvPill(v,s)}</span></div>`};

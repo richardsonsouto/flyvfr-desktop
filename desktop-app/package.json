@@ -1,0 +1,76 @@
+{
+  "name": "virtual-flight-report",
+  "productName": "Virtual Flight Report",
+  "version": "3.1.0",
+  "description": "Virtual Flight Report — app de Windows",
+  "author": "Virtual Flight Report",
+  "main": "main.js",
+  "scripts": {
+    "sync-web": "node sync-web.js",
+    "dist": "node sync-web.js && electron-builder --win nsis --x64 --publish never"
+  },
+  "build": {
+    "appId": "br.com.flyvfr.desktop",
+    "productName": "Virtual Flight Report",
+    "copyright": "Virtual Flight Report",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "web/**/*",
+      "build/icon.ico",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "VirtualFlightReport-Desktop-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Virtual Flight Report",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerSidebar": "build/installerSidebar.bmp",
+      "uninstallerSidebar": "build/installerSidebar.bmp",
+      "language": "1046",
+      "installerLanguages": [
+        "pt_BR",
+        "en_US"
+      ],
+      "multiLanguageInstaller": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/richardsonsouto/flyvfr-desktop/releases/latest/download/"
+      }
+    ],
+    "asar": true
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "node-simconnect": "^4.2.1",
+    "electron-updater": "^6.3.9"
+  },
+  "keywords": [],
+  "license": "UNLICENSED"
+}
