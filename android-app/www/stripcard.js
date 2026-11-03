@@ -128,3 +128,50 @@ function flapAnimate(){
     scPlane(card,t0+300,900);
     setTimeout(()=>{if(dest){dest.classList.remove("sc-hide");dest.classList.add("sc-in");scFlapEl(dest.querySelector(".bpc-code"),0);scFlapEl(dest.querySelector(".bpc-time b"),60)}
       scFlapEl(card.querySelector(".bpc-fn"),40)},t0+1200)})}
+/* Escala: o aeródromo de partida (e o aviso de partida) fica no topo, acima de Escala livre e Escala RPL */
+function scMoveDep(){if(typeof view==="undefined"||view!=="roster")return;const top=document.querySelector("#f-rs .rs-top-fields"),mode=document.querySelector(".rs-mode-field");
+  if(!top||!mode)return;top.classList.add("rs-top-moved");mode.before(top);const n=mode.parentElement.querySelector(".sd-note");if(n){n.classList.add("rs-top-note");top.append(n)}}
+if(typeof render==="function"){const scDepRender=render;render=function(){const r=scDepRender.apply(this,arguments);try{scMoveDep()}catch(e){}return r}}
+/* Escala: o aeródromo de partida ganha imagem de satélite (com vento e cabeceira favorecida por cima)
+   e uma faixa com cidade, tempo (VFR/IFR), pista, vento e saídas RPL das próximas 6 h */
+const DV_T={rwy:["Runway","Pista","Pista","Piste","Piste","滑走路","跑道","활주로"],wind:["Wind","Vento","Viento","Vent","Wind","風","风","바람"],
+ fav:["favours","favorece","favorece","favorise","begünstigt","有利:","有利于","유리:"],head:["headwind","proa","de frente","de face","Gegenwind","向かい風","顶风","정풍"],
+ calm:["calm","calmo","calma","calme","Windstille","静穏","静风","무풍"],vrb:["variable","variável","variable","variable","umlaufend","不定","不定","가변"],
+ rpl:["{n} RPL departures in the next 6 h","{n} saídas RPL nas próximas 6 h","{n} salidas RPL en las próximas 6 h","{n} départs RPL dans les 6 prochaines heures","{n} RPL-Abflüge in den nächsten 6 Std.","今後6時間のRPL出発 {n} 便","未来 6 小时 RPL 离港 {n} 班","향후 6시간 RPL 출발 {n}편"]};
+const dvT=(k,p)=>{let s=(DV_T[k]||[])[LANGS.indexOf(lang)]||(DV_T[k]||[])[0]||k;if(p)for(const x in p)s=s.split("{"+x+"}").join(p[x]);return s};
+const DV={wx:{},rw:false};
+function dvWind(metar){const m=/\b(\d{3}|VRB)(\d{2,3})(?:G\d{2,3})?(KT|MPS)\b/.exec(metar||"");if(!m)return null;let s=+m[2];if(m[3]==="MPS")s=Math.round(s*1.944);return{dir:m[1]==="VRB"?null:+m[1],spd:s}}
+function dvFav(ident,w){if(!ident||!w||w.dir==null||!w.spd)return null;const [a,b]=String(ident).split("/");const h=parseInt(a,10);if(!(h>=1&&h<=36)||!b)return null;
+  const c=Math.round(w.spd*Math.cos((w.dir-h*10)*Math.PI/180));return{end:c>=0?a:b,kt:Math.abs(c)}}
+function dvRplCount(icao){try{if(!SCHED||!SCHED.idx||typeof realDeps!=="function")return 0;const t0=Date.now(),t1=t0+6*36e5;let n=0;
+  for(const code in SCHED.idx){if((SCHED.idx[code]||{})[icao])n+=realDeps(code,icao,t0,t1).length}return n}catch(e){return 0}}
+function dvSat(icao,ap,rw){const z=rw&&rw.m>=3000?13:14,n=2**z,lat=ap[0],lon=ap[1],x=(lon+180)/360*n,lr=lat*Math.PI/180,y=(1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n;
+  const tx=Math.floor(x),ty=Math.floor(y),ox=(x-tx)*256,oy=(y-ty)*256;let imgs="";
+  for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++)imgs+=`<img alt="" decoding="async" src="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${ty+j}/${tx+i}">`;
+  return`<div class="dv-tiles" style="left:calc(50% - ${(256+ox).toFixed(1)}px);top:calc(50% - ${(256+oy).toFixed(1)}px)">${imgs}</div><span class="dv-pin" aria-hidden="true"></span><span class="dv-att">Esri</span>`}
+function scDepVisual(){if(typeof view==="undefined"||view!=="roster")return;const top=document.querySelector(".rs-top-moved"),comp=top&&top.querySelector(".rs-origin-compact");if(!comp)return;
+  const icao=(RS.dep||"").toUpperCase(),ap=typeof AIRPORTS!=="undefined"&&AIRPORTS&&AIRPORTS[icao];
+  let sat=comp.querySelector(".dv-sat"),strip=top.querySelector(".dv-strip");
+  if(!ap){sat&&sat.remove();strip&&strip.remove();return}
+  const rw=(typeof MAP_TOOLS!=="undefined"&&MAP_TOOLS.runways&&MAP_TOOLS.runways.runways||{})[icao]||null;
+  const wx=(typeof WX_CACHE!=="undefined"&&WX_CACHE[icao]&&WX_CACHE[icao].data)||null,w=wx&&dvWind(wx.metar),fav=dvFav(rw&&rw.ident,w);
+  const key=icao+"|"+(rw?rw.ident:"")+"|"+(wx?wx.metar:"");
+  if(!sat){sat=document.createElement("div");sat.className="dv-sat";comp.insertBefore(sat,comp.querySelector(".rs-dep-info")||null)}
+  if(sat.dataset.icao!==icao){sat.dataset.icao=icao;sat.innerHTML=dvSat(icao,ap,rw);sat.hidden=false;sat.querySelectorAll("img").forEach(im=>im.addEventListener("error",()=>{sat.hidden=true},{once:true}))}
+  sat.querySelectorAll(".dv-wind,.dv-rchip").forEach(e=>e.remove());
+  if(w&&w.dir!=null&&w.spd){const r=(w.dir+90)*Math.PI/180,x1=13-Math.cos(r)*9,y1=13-Math.sin(r)*9,x2=13+Math.cos(r)*9,y2=13+Math.sin(r)*9;
+    sat.insertAdjacentHTML("beforeend",`<span class="dv-wind" title="${esc(dvT("wind")+" "+String(w.dir).padStart(3,"0")+"° "+w.spd+" kt")}"><svg viewBox="0 0 26 26"><defs><marker id="dvh" viewBox="0 0 6 6" refX="3" refY="3" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0 6 3 0 6Z" fill="#7fc4ff"/></marker></defs><path d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="#7fc4ff" stroke-width="2.4" marker-end="url(#dvh)"/></svg></span>`)}
+  if(fav)sat.insertAdjacentHTML("beforeend",`<span class="dv-rchip">RWY <i>${esc(fav.end)}</i> · ${esc(dvT("head"))} ${fav.kt} kt</span>`);
+  if(!strip){strip=document.createElement("div");strip.className="dv-strip";comp.after(strip)}
+  if(strip.dataset.key!==key){strip.dataset.key=key;const pills=[];
+    pills.push(`<span class="dv-pill">📍 ${esc(ap[4]||ap[3]||icao)}${ap[5]?` · ${esc(ap[5])}`:""}</span>`);
+    if(wx&&wx.fltCat)pills.push(`<span class="dv-pill dv-cat ${esc(wx.fltCat)}">${esc(wx.fltCat)}</span>`);
+    if(rw)pills.push(`<span class="dv-pill">🛬 ${esc(dvT("rwy"))} <b>${esc(rw.ident)}</b> · ${Number(rw.m).toLocaleString(LOCALE[lang]||"pt-BR")} m</span>`);
+    if(w)pills.push(`<span class="dv-pill">🧭 ${esc(dvT("wind"))} <b>${w.spd?(w.dir==null?dvT("vrb"):String(w.dir).padStart(3,"0")+"°")+" "+w.spd+" kt":dvT("calm")}</b>${fav?` · ${esc(dvT("fav"))} <b>${esc(fav.end)}</b>`:""}</span>`);
+    const n=dvRplCount(icao);if(n)pills.push(`<span class="dv-pill">📋 ${esc(dvT("rpl",{n}))}</span>`);
+    strip.innerHTML=pills.join("")}
+  if(!rw&&!DV.rw&&typeof mapLoadRunways==="function"){DV.rw=true;mapLoadRunways().then(()=>scDepVisual()).catch(()=>{})}
+  if(!wx&&!DV.wx[icao]&&typeof fetchWx==="function"){DV.wx[icao]=1;fetchWx(icao).then(()=>scDepVisual()).catch(()=>{})}}
+if(typeof render==="function"){const dvRender=render;render=function(){const r=dvRender.apply(this,arguments);try{scDepVisual()}catch(e){}return r}}
+document.addEventListener("input",e=>{if(e.target&&e.target.id==="rs-dep")setTimeout(()=>{try{scDepVisual()}catch(x){}},80)});
+document.addEventListener("change",e=>{if(e.target&&e.target.id==="rs-dep")setTimeout(()=>{try{scDepVisual()}catch(x){}},80)});

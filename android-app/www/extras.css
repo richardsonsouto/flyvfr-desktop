@@ -294,3 +294,80 @@
 .sct-seg.fly.sc-fill{clip-path:inset(0 100% 0 0);animation:scFill .9s ease-out forwards}
 @keyframes scFill{to{clip-path:inset(0 0 0 0)}}
 @media (prefers-reduced-motion:reduce){.sc-in,.sc-flap>span.f,.sct-seg.fly.sc-fill{animation:none;clip-path:none}}
+
+/* Escala: partida no topo (stripcard.js › scMoveDep) */
+.rs-top-moved{margin:0 0 14px;padding:0 0 14px;border-bottom:1px solid var(--line)}
+.rs-top-moved .rs-origin-compact{display:grid!important;grid-template-columns:minmax(140px,170px) minmax(0,1fr);gap:8px 18px;padding:0;border:0;background:none;align-items:end}
+.rs-top-moved .rs-origin-compact>.rs-dep-info{display:contents}
+.rs-top-moved .rs-dep-f{grid-column:1;grid-row:1;margin:0}
+.rs-top-moved .rs-di-airport{grid-column:2;grid-row:1;align-self:end;padding-bottom:6px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.rs-top-moved .rs-dep-info>:not(.rs-di-airport){grid-column:1/-1}
+.rs-top-moved .sd-note{margin:12px 0 0}
+@media (max-width:520px){.rs-top-moved .rs-origin-compact{grid-template-columns:minmax(0,1fr)}.rs-top-moved .rs-di-airport{grid-column:1;grid-row:auto;padding-bottom:0}}
+
+/* Escala: satélite e faixa do aeródromo de partida; quadro "Escala" alinhado ao topo (≥761 px) */
+.rs-top-moved .rs-origin-compact{grid-template-columns:minmax(140px,170px) 156px minmax(0,1fr)}
+.rs-top-moved .rs-di-airport{grid-column:3}
+.dv-sat{grid-column:2;grid-row:1;position:relative;width:156px;height:104px;border-radius:10px;overflow:hidden;background:#1f2a24;border:1px solid var(--line);align-self:center}
+.dv-sat[hidden]{display:none}
+.dv-tiles{position:absolute;display:grid;grid-template-columns:repeat(3,256px)}.dv-tiles img{width:256px;height:256px;display:block;max-width:none}
+.dv-pin{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;border:2px solid #fff;background:var(--accent,#f5b800);box-shadow:0 0 0 3px rgba(0,0,0,.3)}
+.dv-att{position:absolute;left:5px;top:3px;font-size:9px;color:#fff;text-shadow:0 0 3px #000;opacity:.85}
+.dv-wind{position:absolute;right:5px;top:5px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.58);display:grid;place-items:center}.dv-wind svg{width:26px;height:26px}
+.dv-rchip{position:absolute;left:5px;bottom:5px;background:rgba(0,0,0,.66);color:#fff;border-radius:6px;padding:2px 6px;font:700 10px var(--f-mono,ui-monospace),monospace;letter-spacing:.03em;white-space:nowrap}.dv-rchip i{font-style:normal;color:#6fe3a2}
+.dv-strip{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:12px}
+.dv-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--sunk,rgba(0,0,0,.03));color:var(--ink);border-radius:999px;padding:4px 10px;font-size:.8rem;white-space:nowrap}
+.dv-pill b{font-family:var(--f-mono,ui-monospace),monospace}
+.dv-cat{color:#fff!important;border:0;font-weight:700}.dv-cat.VFR{background:#2f8a52}.dv-cat.MVFR{background:#2364c2}.dv-cat.IFR{background:#c4321f}.dv-cat.LIFR{background:#8e2a9e}
+@media (max-width:520px){.rs-top-moved .rs-origin-compact{grid-template-columns:minmax(0,1fr) 120px}.rs-top-moved .rs-dep-f{grid-column:1/-1}.dv-sat{grid-column:2;grid-row:2;width:120px;height:84px}.rs-top-moved .rs-di-airport{grid-column:1;grid-row:2}}
+@media (min-width:761px){
+ .rs-form-screen:has(>.rs-top-moved){display:grid;grid-template-columns:minmax(0,1fr) 285px;column-gap:22px;align-items:start}
+ .rs-form-screen:has(>.rs-top-moved)>*{grid-column:1}
+ .rs-form-screen:has(>.rs-top-moved)>#f-rs{display:contents}
+ .rs-form-screen:has(>.rs-top-moved)>#f-rs>.rs-sidebar-main{grid-column:1}
+ .rs-form-screen:has(>.rs-top-moved)>#f-rs>.rs-layout-sidebar{grid-column:2;grid-row:1/span 8;align-self:start}
+}
+.rs-top-moved{container-type:inline-size}
+@container (max-width:600px){.rs-top-moved .rs-origin-compact{grid-template-columns:minmax(0,1fr) 140px;gap:8px 14px}.rs-top-moved .rs-dep-f{grid-column:1;grid-row:1}.dv-sat{grid-column:2;grid-row:1/span 2;width:140px;height:94px}.rs-top-moved .rs-di-airport{grid-column:1;grid-row:2;align-self:start;padding-bottom:0}}
+
+/* Escala: formulário e escala gerada como frente e verso de um cartão (rsflip.js) */
+#view>.rf-hidden{display:none!important}
+#view>.rs-form-screen,#view>.rs-out{transform-origin:50% 0;backface-visibility:hidden;will-change:transform}
+.rf-bar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.rf-view{width:100%;margin-top:8px}
+#view.rf-flipping{overflow:clip;overflow-clip-margin:0}
+
+/* crachá de tripulante (cracha.js) — o cartão é sempre branco, como um crachá físico; a faixa usa as cores da companhia */
+.cb{position:relative;width:300px;max-width:100%;border-radius:18px;background:#fff;color:#171717;overflow:hidden;border:1px solid rgba(0,0,0,.08);box-shadow:0 18px 40px -18px rgba(0,0,0,.45);text-align:center;font-family:inherit}
+.cb-hd{position:relative;padding:34px 18px 58px;color:var(--cb-ink);display:flex;flex-direction:column;align-items:center;gap:8px}
+.cb-slot{position:absolute;top:11px;left:50%;width:56px;height:9px;margin-left:-28px;border-radius:6px;background:rgba(0,0,0,.25)}
+.cb-logo{height:30px;width:auto;max-width:180px;object-fit:contain;display:block}
+.cb-al{font-weight:800;font-size:1.05rem;letter-spacing:.02em}
+.cb-hd small{font-weight:700;font-size:.64rem;letter-spacing:.22em}
+.cb-ph{width:96px;height:96px;margin:-48px auto 0;border-radius:50%;border:4px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.22);display:grid;place-items:center;color:var(--cb-ink);font-weight:800;font-size:1.7rem;position:relative}
+.cb-nm{padding:10px 16px 0}.cb-nm b{display:block;font-size:1.15rem;line-height:1.2}.cb-nm span{font-size:.88rem;color:#5c5c5c}
+.cb-rk{display:flex;justify-content:center;margin:8px 0 4px}.cb-rk .insignia svg{width:30px;height:auto}
+.cb-dl{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:10px 22px 14px;text-align:left}
+.cb-dl dt{color:#6b6b6b;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase}.cb-dl dd{margin:0;font-weight:700;font-size:.9rem;color:#171717}
+.cb-ft{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 22px 16px;border-top:1px dashed #dddad2}
+.cb-ft small{font-size:.6rem;color:#6b6b6b;letter-spacing:.1em;text-align:right;line-height:1.35}
+.cb-bc{display:flex;align-items:stretch;height:30px;overflow:hidden;max-width:150px}.cb-bc i{display:block;background:#171717;flex:none}
+/* versão pequena no Logbook */
+.cb-mini{width:132px;flex:none;cursor:pointer;border-radius:14px;padding-bottom:10px;transition:transform .15s,box-shadow .15s}
+.cb-mini:hover,.cb-mini:focus-visible{transform:translateY(-2px) rotate(-1deg);box-shadow:0 22px 40px -16px rgba(0,0,0,.5);outline:none}
+.cb-mini:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.cb-mini .cb-hd{padding:22px 10px 36px;gap:5px}.cb-mini .cb-slot{width:36px;height:6px;margin-left:-18px;top:8px}
+.cb-mini .cb-logo{height:20px;max-width:100px}.cb-mini .cb-al{font-size:.78rem}.cb-mini .cb-hd small{font-size:.48rem;letter-spacing:.14em}
+.cb-mini .cb-ph{width:58px;height:58px;margin-top:-29px;border-width:3px;font-size:1.05rem}
+.cb-mini .cb-nm{padding:6px 8px 0}.cb-mini .cb-nm span{font-size:.74rem;line-height:1.2;display:block}
+.cb-mini .cb-rk{margin:6px 0 0}.cb-mini .cb-rk .insignia svg{width:22px}
+.cb-panel{display:flex;gap:22px;align-items:center}.cb-main{flex:1;min-width:0}
+.cb-acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:600px){.cb-panel{flex-direction:column;align-items:stretch}.cb-panel>.cb-mini{align-self:center}}
+/* crachá grande */
+.cb-modal{position:fixed;inset:0;z-index:2000;background:rgba(8,12,18,.62);display:grid;place-items:center;padding:16px;overflow:auto;animation:cbFade .18s ease}
+.cb-box{display:flex;flex-direction:column;align-items:center;gap:14px;animation:cbIn .32s cubic-bezier(.2,.8,.3,1)}
+.cb-box .cb{width:320px}
+.cb-btns{display:flex;gap:8px}
+@keyframes cbFade{from{opacity:0}}@keyframes cbIn{from{opacity:0;transform:translateY(18px) rotate(-3deg) scale(.96)}}
+@media (prefers-reduced-motion:reduce){.cb-modal,.cb-box{animation:none}.cb-mini{transition:none}}
