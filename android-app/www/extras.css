@@ -280,3 +280,17 @@
 /* Cartão de embarque: a companhia aparece uma vez só (o logotipo; o nome em texto só se o logotipo não carregar) */
 .bpc-top .reg-tag .sym-slot{display:none}
 .bpc-top .al-sym+.bpc-al{display:none}
+
+/* Animação ao gerar a escala (stripcard.js › flapAnimate) */
+.sc-hide{opacity:0!important}
+.sc-in{animation:scIn .35s ease-out}
+@keyframes scIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.sc-flap{display:inline-flex}
+.sc-flap>span{display:inline-block;min-width:.6em;text-align:center}
+.sc-flap>span.f{animation:scFlp .09s linear}
+@keyframes scFlp{0%{transform:perspective(120px) rotateX(-80deg);filter:brightness(.6)}100%{transform:none}}
+.bpc-line.sc-draw{background:linear-gradient(90deg,var(--bpc-t,var(--accent)) 0 var(--sc-draw),transparent var(--sc-draw)),repeating-linear-gradient(90deg,var(--line) 0 8px,transparent 8px 14px)}
+.bpc-line.sc-draw b{transform:translate(-50%,-55%)}
+.sct-seg.fly.sc-fill{clip-path:inset(0 100% 0 0);animation:scFill .9s ease-out forwards}
+@keyframes scFill{to{clip-path:inset(0 0 0 0)}}
+@media (prefers-reduced-motion:reduce){.sc-in,.sc-flap>span.f,.sct-seg.fly.sc-fill{animation:none;clip-path:none}}

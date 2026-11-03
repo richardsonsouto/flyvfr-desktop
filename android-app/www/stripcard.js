@@ -99,3 +99,32 @@ function sdNoteHTML(){const N=SD.note;if(!N||RS.roster)return"";if(N.kind!=="sug
   if(RS.dep!==N.from||ACP.rs.al!==N.al){SD.note=null;return""}
   return`<div class="fa-rpl-bar sd-note">${alSym(N.al)}<span>${esc(sdt("sd_suggest",{icao:N.icao,al:N.al,from:N.from}))}</span><button type="button" class="btn small" data-action="sd-use" data-v="${esc(N.icao)}">${esc(sdt("sd_use",{icao:N.icao}))}</button></div>`}
 if(typeof rsAcfHTML==="function"){const sdAcf=rsAcfHTML;rsAcfHTML=function(){return sdNoteHTML()+sdAcf.apply(this,arguments)}}
+/* Animação ao gerar a escala (painel de partidas + rota desenhada): para cada voo, o cartão entra, a origem e o horário
+   giram no painel, a barra do voo na linha do tempo enche e o avião voa até o destino; ao chegar, o destino, o horário
+   de chegada e o número do voo giram e param. Só ao gerar; desligada com "reduzir movimento". */
+const SC_ANIM={L:"ABCDEFGHIJKLMNOPQRSTUVWXYZ",D:"0123456789",step:1500};
+function scFlapEl(el,delay){if(!el)return;const fin=el.textContent;if(!fin.trim())return;
+  el.classList.add("sc-flap");el.innerHTML=[...fin].map(c=>`<span>${esc(c)}</span>`).join("");
+  const chs=[...el.children];let left=chs.length;
+  chs.forEach((ch,ci)=>{const f=ch.textContent;if(!/[A-Z0-9]/.test(f)){if(!--left)done();return}const pool=/[0-9]/.test(f)?SC_ANIM.D:SC_ANIM.L;
+    let k=0;const steps=7+Math.floor(Math.random()*7);ch.textContent=pool[Math.floor(Math.random()*pool.length)];
+    setTimeout(function tick(){if(!ch.isConnected)return;ch.classList.remove("f");void ch.offsetWidth;ch.classList.add("f");
+      if(++k>=steps){ch.textContent=f;if(!--left)setTimeout(done,120);return}ch.textContent=pool[Math.floor(Math.random()*pool.length)];setTimeout(tick,55)},delay+ci*35)});
+  function done(){if(el.isConnected){el.textContent=fin;el.classList.remove("sc-flap")}}}
+function scPlane(card,delay,dur){const b=card.querySelector(".bpc-line b"),line=card.querySelector(".bpc-line");if(!b||!line)return;
+  b.style.left="0%";line.style.setProperty("--sc-draw","0%");line.classList.add("sc-draw");
+  setTimeout(()=>{const t0=performance.now();(function f(now){if(!b.isConnected)return;const p=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-p,3);
+    b.style.left=(e*100)+"%";line.style.setProperty("--sc-draw",(e*100)+"%");if(p<1)requestAnimationFrame(f);else setTimeout(()=>{b.style.left="";line.classList.remove("sc-draw")},250)})(t0)},delay)}
+function flapAnimate(){
+  if(typeof RS==="undefined"||!RS.flapAnim)return;RS.flapAnim=false;
+  if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  const out=document.querySelector(".rs-out");if(!out)return;
+  const cards=[...out.querySelectorAll(".bpc")],flys=[...out.querySelectorAll(".sct-seg.fly")];if(!cards.length)return;
+  cards.forEach((card,i)=>{const t0=i*SC_ANIM.step;
+    card.classList.add("sc-hide");const dest=card.querySelector(".bpc-ap.r");if(dest)dest.classList.add("sc-hide");
+    const fly=flys[i];if(fly){fly.classList.add("sc-fill");fly.style.animationDelay=(t0+250)+"ms"}
+    setTimeout(()=>{card.classList.remove("sc-hide");card.classList.add("sc-in");
+      const org=card.querySelector(".bpc-ap:not(.r)");scFlapEl(org&&org.querySelector(".bpc-code"),80);scFlapEl(org&&org.querySelector(".bpc-time b"),140)},t0);
+    scPlane(card,t0+300,900);
+    setTimeout(()=>{if(dest){dest.classList.remove("sc-hide");dest.classList.add("sc-in");scFlapEl(dest.querySelector(".bpc-code"),0);scFlapEl(dest.querySelector(".bpc-time b"),60)}
+      scFlapEl(card.querySelector(".bpc-fn"),40)},t0+1200)})}
