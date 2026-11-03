@@ -100,3 +100,14 @@ window.addEventListener('beforeprint',()=>{document.querySelector('.brf-workspac
 window.addEventListener('afterprint',brfLayoutSchedule);
 /* Checklist do briefing removido: quem tinha a seção salva volta para Voo */
 if(typeof render==="function"){const blRender=render;render=function(){if(typeof BRF!=="undefined"&&BRF.section==="checklist")BRF.section="flight";return blRender.apply(this,arguments)}}
+
+/* fontes da meteorologia/NOTAM: em vez de uma linha solta no fim da sala (que ficava por cima do painel),
+   viram uma nota no fim dos painéis Meteorologia e NOTAM, onde esses dados aparecem. Na impressão continuam no rodapé. */
+function brfSrcFill(){if(typeof BRF!=="undefined"&&BRF.printing)return;const v=document.getElementById("view");if(!v||!v.dataset.brfSrc)return;const txt=v.dataset.brfSrc;
+  ["wx","notam"].forEach(k=>{const sp=v.querySelector(`.brf-subpanel[data-brf-section="${k}"]`),box=sp&&(sp.querySelector(":scope>section.panel")||sp);if(box&&!sp.querySelector(".brf-src"))box.insertAdjacentHTML("beforeend",`<p class="brf-src">ⓘ ${esc(txt)}</p>`)})}
+function brfSrcPlace(){if(typeof view==="undefined"||view!=="briefing"||(typeof BRF!=="undefined"&&BRF.printing))return;
+  const v=document.getElementById("view");if(!v)return;const txt=t("brf_src");
+  const loose=[...v.querySelectorAll("p.muted")].find(p=>!p.classList.contains("brf-src")&&p.textContent===txt);if(!loose)return;loose.remove();v.dataset.brfSrc=txt;
+  ["wx","notam"].forEach(k=>{const sp=v.querySelector(`.brf-subpanel[data-brf-section="${k}"]`),box=sp&&(sp.querySelector(":scope>section.panel")||sp);if(box&&!sp.querySelector(".brf-src"))box.insertAdjacentHTML("beforeend",`<p class="brf-src">ⓘ ${esc(txt)}</p>`)})}
+{let bsRaf=0;new MutationObserver(()=>{if(bsRaf||typeof view==="undefined"||view!=="briefing")return;bsRaf=requestAnimationFrame(()=>{bsRaf=0;try{brfSrcFill()}catch(e){}})}).observe(document.documentElement,{childList:true,subtree:true})}
+if(typeof render==="function"){const bsRender=render;render=function(){const r=bsRender.apply(this,arguments);try{brfSrcPlace()}catch(e){}return r}}

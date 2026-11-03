@@ -177,3 +177,14 @@ async function faShowVersion(){try{const host=document.getElementById("palette")
   if(window.vfrNative&&typeof window.vfrNative.version==="function"){try{const dv=await window.vfrNative.version();if(dv)v=(v?v.replace("vfr-v","")+" · ":"")+"Windows "+dv}catch(e){}}
   el.textContent=(LANGS.indexOf(lang)===1?"Versão do app: ":"App version: ")+(v?v.replace("vfr-v",""):"—")+(window.vfrNative&&window.vfrNative.platform==="android"?" · Android":"")}catch(e){}}
 setTimeout(faShowVersion,1500);document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("#foot-btn"))setTimeout(faShowVersion,50)});
+
+/* Frota: ao abrir o menu, já vem filtrada pela companhia favorita do piloto (região dela + a companhia).
+   O piloto pode trocar o filtro; ao sair e voltar para a Frota, a favorita volta a vir selecionada. */
+if(typeof fleetOpenHomeRegion==="function"){const faFleetHome=fleetOpenHomeRegion;fleetOpenHomeRegion=function(){
+  const fav=myFavAirline();
+  if(fav&&typeof fleet!=="undefined"&&fleet.some(a=>a.airline===fav)&&typeof view!=="undefined"&&view==="fleet"){
+    if(typeof fleetGeoVersion!=="undefined")fleetGeoVersion++;
+    fRegion=typeof regionOf==="function"?regionOf(fav):"all";fAirline=fav;fStatus="all";fQuery="";fLimit=60;fFav=false;
+    try{if(typeof selAc!=="undefined"&&selAc){const a=acById(selAc);if(!a||a.airline!==fav)selAc=(fleet.find(x=>x.airline===fav&&isFav(x.id))||{}).id||selAc}}catch(e){}
+    render();return Promise.resolve()}
+  return faFleetHome.apply(this,arguments)}}
