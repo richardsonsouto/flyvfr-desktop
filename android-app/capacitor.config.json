@@ -2,7 +2,20 @@
   "appId": "dev.pages.virtual_flight_report.twa",
   "appName": "Virtual Flight Report",
   "webDir": "www",
-  "android": { "backgroundColor": "#13202E" },
-  "server": { "androidScheme": "https" },
-  "plugins": { "SplashScreen": { "launchShowDuration": 800, "backgroundColor": "#13202E" } }
+  "android": {
+    "backgroundColor": "#13202E"
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 800,
+      "backgroundColor": "#13202E"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_vfr",
+      "iconColor": "#F5B800"
+    }
+  }
 }

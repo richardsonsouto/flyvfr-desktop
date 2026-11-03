@@ -7,6 +7,9 @@
   change:["change","alterar","cambiar","modifier","ändern","変更","更改","변경"]};
  /* campo de busca do seletor: sem o "(ICAO)" no texto (a busca por código do aeroporto continua funcionando) */
  if(typeof L!=="undefined"&&Array.isArray(L.acp_search))L.acp_search=L.acp_search.map(x=>typeof x==="string"?x.replace(/\s*[（(](?:ICAO|OACI)[)）]/g,""):x);
+ /* Frota: botão do cartão da aeronave — "Escalar esta aeronave" (abre a Escala livre com ela selecionada) */
+ if(typeof L!=="undefined"){L.loc_choose=["Roster this aircraft","Escalar esta aeronave","Programar esta aeronave","Planifier cet avion","Dieses Flugzeug einplanen","この機体でスケジュール","为此飞机排班","이 기체로 스케줄 짜기"];
+  L.loc_choose_t=["Opens the free roster with this aircraft selected.","Abre a Escala livre com esta aeronave selecionada.","Abre la programación libre con esta aeronave seleccionada.","Ouvre le planning libre avec cet avion sélectionné.","Öffnet den freien Dienstplan mit diesem Flugzeug.","この機体を選択した状態で自由スケジュールを開きます。","打开自由排班并选中此飞机。","이 기체를 선택한 상태로 자유 스케줄을 엽니다."]}
  const lt=(k,p)=>{let s=(T[k][LANGS.indexOf(lang)]||T[k][0]);if(p)for(const x in p)s=s.split("{"+x+"}").join(p[x]);return s};
  const ready=()=>{if(typeof LIVERIES==="undefined")return false;if(!LIVERIES){try{loadLiveries()}catch(e){}return false}return true};
  const ok=a=>!!a&&myLivOf(a.id).length>0;

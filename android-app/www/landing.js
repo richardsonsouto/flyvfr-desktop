@@ -482,3 +482,20 @@ document.addEventListener("click",e=>{const b=e.target.closest('[data-action="lp
   lp_foot_about:["A virtual airline for flight simulators: real fleet, rosters built from real flights*, a full briefing room, live tracking and a whole career, free of charge.","Uma companhia aérea virtual para simuladores de voo: frota real, escalas com voos reais*, sala de briefing completa, rastreio ao vivo e uma carreira inteira, de graça.","Una aerolínea virtual para simuladores de vuelo: flota real, programaciones con vuelos reales*, sala de briefing completa, rastreo en vivo y una carrera entera, gratis.","Une compagnie virtuelle pour simulateurs de vol : flotte réelle, plannings de vols réels*, salle de briefing complète, suivi en direct et carrière complète, gratuitement.","Eine virtuelle Airline für Flugsimulatoren: echte Flotte, Dienstpläne aus echten Flügen*, kompletter Briefingraum, Live-Tracking und eine ganze Karriere – kostenlos.","フライトシミュレーター向けのバーチャル航空会社：実在の機材、実在便*のスケジュール、充実したブリーフィングルーム、ライブ追跡、キャリアのすべてを無料で。","面向飞行模拟器的虚拟航空公司：真实机队、真实航班*排班、完整的简报室、实时追踪和完整的职业生涯，全部免费。","비행 시뮬레이터용 가상 항공사: 실제 기단, 실제 항공편* 스케줄, 완전한 브리핑 룸, 실시간 추적, 경력 전체를 무료로."],
   lp_fl_brief:["Briefing room","Sala de briefing","Sala de briefing","Salle de briefing","Briefingraum","ブリーフィングルーム","简报室","브리핑 룸"]};
  for(const k in S)L[k]=S[k]})();
+
+/* página inicial (nov/2026, parte 2): Frota com filtro de pintura, Escala RPL primeiro e satélite, lembrete antes do voo,
+   crachá e ranking de pousos — nos 8 idiomas */
+(function(){if(typeof LP_SHOW==="undefined")return;
+ const U={
+  pt:{fleet:"Na hora de escalar, só as matrículas com pintura para o seu simulador.",roster:"Escala RPL primeiro, com satélite da partida e a pista favorecida pelo vento.",brief:"Lembrete 1 h e 15 min antes da saída.",pay:"Crachá de tripulante e ranking de horas e de pousos."},
+  en:{fleet:"When rostering, only registrations with a livery for your simulator.",roster:"RPL roster first, with departure satellite view and the wind-favoured runway.",brief:"Reminder 1 h and 15 min before departure.",pay:"Crew badge and rankings for hours and landings."},
+  es:{fleet:"Al programar, solo las matrículas con librea para tu simulador.",roster:"Programación RPL primero, con satélite de la salida y la pista favorecida por el viento.",brief:"Recordatorio 1 h y 15 min antes de la salida.",pay:"Credencial de tripulante y ranking de horas y de aterrizajes."},
+  fr:{fleet:"Au moment de planifier, seules les immatriculations avec une livrée pour votre simulateur.",roster:"Planning RPL d’abord, avec vue satellite du départ et la piste favorisée par le vent.",brief:"Rappel 1 h et 15 min avant le départ.",pay:"Badge d’équipage et classements des heures et des atterrissages."},
+  de:{fleet:"Beim Einplanen nur Kennzeichen mit Lackierung für Ihren Simulator.",roster:"RPL-Dienstplan zuerst, mit Satellitenbild des Abflugs und windgünstiger Piste.",brief:"Erinnerung 1 Std. und 15 Min. vor dem Abflug.",pay:"Crew-Ausweis und Ranglisten für Stunden und Landungen."},
+  ja:{fleet:"スケジュール作成時は、あなたのシミュレーター用の塗装がある機体だけを表示。",roster:"RPLスケジュールを優先。出発地の衛星画像と風に有利な滑走路も表示。",brief:"出発の1時間前と15分前にリマインダー。",pay:"乗務員証と、飛行時間・着陸のランキング。"},
+  zh:{fleet:"排班时只显示有你所用模拟器涂装的注册号。",roster:"RPL排班优先，附出发机场卫星图和顺风有利的跑道。",brief:"起飞前1小时和15分钟提醒。",pay:"机组工牌，以及飞行小时和着陆排行。"},
+  ko:{fleet:"스케줄을 짤 때 내 시뮬레이터용 도색이 있는 등록부호만 표시.",roster:"RPL 스케줄 우선, 출발 공항 위성 사진과 바람에 유리한 활주로 표시.",brief:"출발 1시간 전과 15분 전 알림.",pay:"승무원증, 그리고 비행시간·착륙 순위."}};
+ for(const lg of Object.keys(U)){const L=LP_SHOW[lg];if(!L)continue;const u=U[lg],by={};L.forEach(f=>by[f.img]=f);
+  if(by.fleet&&by.fleet.li)by.fleet.li[2]=u.fleet;if(by.roster&&by.roster.li)by.roster.li[1]=u.roster;
+  if(by.briefing&&by.briefing.li&&!by.briefing.li.includes(u.brief))by.briefing.li.push(u.brief);if(by.pay&&by.pay.li)by.pay.li[2]=u.pay}
+})();

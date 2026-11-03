@@ -7,17 +7,19 @@
  const ft=(k,p)=>{let s=(T[k][LANGS.indexOf(lang)]||T[k][0]);if(p)for(const x in p)s=s.split("{"+x+"}").join(p[x]);return s};
  const EF={day:0,liv:false,key:""};
  function unfit(v){v.classList.remove("ef");v.querySelectorAll(".ef-days").forEach(x=>x.remove());v.querySelectorAll(".ef-row,.ef-acc,.ef-foot").forEach(w=>{while(w.firstChild)w.before(w.firstChild);w.remove()});v.querySelectorAll(".ef-liv-t").forEach(x=>x.remove());const lw=v.querySelector("#rs-liveries"),rr=v.querySelector(".rs-layout-right");if(lw&&rr&&lw.parentElement!==rr)rr.appendChild(lw);
-  const liv=v.querySelector("#rs-liveries .rs-liv");if(liv){liv.classList.remove("ef-open");liv.removeAttribute("style")}EF.liv=false;
+  const liv=v.querySelector("#rs-liveries .rs-liv");if(liv){liv.classList.remove("ef-open");liv.removeAttribute("style")}EF.liv=false;document.getElementById("ef-liv-pop")?.remove();
   const out=v.querySelector(".rs-out");if(out){out.querySelectorAll(":scope>section.rs-day").forEach(d=>d.hidden=false);const l=out.querySelector(".rs-legs.ef-scroll");if(l){l.style.maxHeight="";l.classList.remove("ef-scroll")}}}
  function fit(){const v=document.getElementById("view");if(!v)return;const on=typeof view!=="undefined"&&view==="roster";
-  if(!on||innerWidth<761){if(v.classList.contains("ef"))unfit(v);return}v.classList.add("ef");
+  if(!on||innerWidth<761){document.getElementById("ef-liv-pop")?.remove();if(v.classList.contains("ef"))unfit(v);return}v.classList.add("ef");
   /* pinturas: o título vira um botão que abre/fecha a lista */
   const lw=v.querySelector("#rs-liveries"),ph=v.querySelector(".rs-acphoto");if(lw&&ph&&lw.parentElement!==ph)ph.appendChild(lw);
   const liv=v.querySelector("#rs-liveries .rs-liv");if(liv){const h=liv.querySelector(".liv>h3");const n=h?((h.textContent.match(/\d+/)||[""])[0]):"";
    let bt=lw.querySelector(":scope>.ef-liv-t");const lab=`🎨 ${esc(ft("liv",{n}))} <span aria-hidden="true">▾</span>`;
    if(!bt){bt=document.createElement("button");bt.type="button";bt.className="ef-liv-t";bt.dataset.action="ef-liv";lw.prepend(bt)}
    if(bt.dataset.l!==lab){bt.dataset.l=lab;bt.innerHTML=lab}if(bt.getAttribute("aria-expanded")!==String(EF.liv))bt.setAttribute("aria-expanded",EF.liv);
-   liv.classList.toggle("ef-open",EF.liv);if(EF.liv)placeLiv()}
+   liv.classList.toggle("ef-open",EF.liv)}placeLiv();
+  /* aviso "Mostrando só os voos da <favorita>" sobe para a linha dos botões Escala RPL / Escala livre (economiza uma linha) */
+  const fb=v.querySelector("#rs-acf .fa-rpl-bar"),mf=v.querySelector(".rs-mode-field");if(fb&&mf){mf.querySelectorAll(".fa-rpl-bar").forEach(x=>x.remove());mf.appendChild(fb)}
   /* ADS-B e regras lado a lado */
   const g=v.querySelector("#rs-ground"),rules=v.querySelector(".rs-form-screen>.rs-rules");
   if(g&&rules&&!v.querySelector(".ef-foot")){const f=document.createElement("div");f.className="ef-foot";g.before(f);f.append(g,rules)}
@@ -42,7 +44,11 @@
  /* frente após gerar ("Ajustar escala"): companhia, aeronave e foto continuam no formulário para o piloto ajustar */
  if(typeof rsAcfHTML==="function"){const efAcf=rsAcfHTML;rsAcfHTML=function(){if(typeof RS==="undefined"||!RS.roster)return efAcf.apply(this,arguments);const r=RS.roster;RS.roster=null;try{return efAcf.apply(this,arguments)}finally{RS.roster=r}}}
  /* lista de pinturas: abre junto do botão, para cima ou para baixo conforme o espaço, sempre inteira dentro da janela */
- function placeLiv(){const v=document.getElementById("view"),bt=v&&v.querySelector("#rs-liveries>.ef-liv-t"),pop=v&&v.querySelector("#rs-liveries .rs-liv.ef-open");if(!bt||!pop)return;
+ /* a lista é desenhada numa camada própria no <body> (fora de qualquer animação/transformação da tela), presa ao botão */
+ function placeLiv(){const v=document.getElementById("view"),bt=v&&v.querySelector("#rs-liveries>.ef-liv-t"),src=v&&v.querySelector("#rs-liveries .rs-liv");
+  let pop=document.getElementById("ef-liv-pop");if(!EF.liv||!bt||!src||!bt.offsetParent){pop&&pop.remove();return}
+  if(!pop){pop=document.createElement("div");pop.id="ef-liv-pop";pop.className="ef-liv-pop";document.body.appendChild(pop)}
+  if(pop.dataset.h!==src.innerHTML){pop.dataset.h=src.innerHTML;pop.innerHTML=src.innerHTML}
   const r=bt.getBoundingClientRect(),M=12,w=Math.min(640,innerWidth-2*M),below=innerHeight-r.bottom-M-6,above=r.top-M-6,down=below>=260||below>=above;
   pop.style.width=w+"px";pop.style.left=Math.max(M,Math.min(innerWidth-w-M,r.right-w))+"px";
   if(down){pop.style.top=(r.bottom+6)+"px";pop.style.bottom="auto";pop.style.maxHeight=Math.max(120,Math.min(420,below))+"px"}
@@ -51,12 +57,13 @@
  if(typeof render==="function"){const efRender=render;render=function(){const r=efRender.apply(this,arguments);try{fit()}catch(e){console.warn(e)}return r}}
  document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest('[data-action="ef-liv"],[data-action="ef-day"]');if(!b)return;
   if(b.dataset.action==="ef-liv"){EF.liv=!EF.liv;b.setAttribute("aria-expanded",EF.liv);fit()}else{EF.day=+b.dataset.i;fit();squeeze()}});
- document.addEventListener("click",e=>{if(EF.liv&&!(e.target.closest&&e.target.closest("#rs-liveries"))){EF.liv=false;fit()}});
+ document.addEventListener("click",e=>{if(EF.liv&&!(e.target.closest&&e.target.closest("#rs-liveries,#ef-liv-pop"))){EF.liv=false;fit();placeLiv()}});
  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&EF.liv){EF.liv=false;fit()}});
  const css=`
 @media (min-width:761px){
 #view.ef{font-size:.93rem}
-@media (max-height:700px){#view.ef>.rs-screen-head{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}#view.ef .rs-top-moved{padding-bottom:6px;margin-bottom:6px}#view.ef .rs-form-screen .dv-strip{gap:4px 6px}#view.ef .dv-pill{padding:2px 8px;font-size:.76rem}}
+#view.ef .rs-mode-field:has(.fa-rpl-bar){flex-direction:row;flex-wrap:nowrap;align-items:center}#view.ef .rs-mode-field:has(.fa-rpl-bar)>small:empty{display:none}#view.ef .rs-mode-field .fa-rpl-bar{margin:0 0 0 auto;min-width:0;flex:0 1 auto;align-self:center}#view.ef .fa-rpl-bar{padding:3px 6px 3px 10px;margin:0 0 6px;gap:8px;font-size:.8rem;min-height:0}#view.ef .fa-rpl-bar .btn{padding:3px 10px;font-size:.78rem;min-height:0}#view.ef .fa-rpl-bar img,#view.ef .fa-rpl-bar .al-sym{width:18px;height:18px}
+@media (max-height:700px){#view.ef .ef-foot summary,#view.ef .ef-foot .adsb-ground-head{padding-top:2px;padding-bottom:2px}#view.ef .ef-foot details{padding-top:0;padding-bottom:0}#view.ef .rs-acphoto{padding:3px 10px}#view.ef .rs-acphoto .ac-img img{height:40px;width:72px}#view.ef .rs-form-screen,#view.ef .rs-out{padding-top:8px;padding-bottom:8px}#view.ef .rs-top-moved .dv-sat{height:82px!important;width:128px!important}#view.ef .rs-mode-field .rs-mode-card{padding:4px 12px}#view.ef>.rs-screen-head{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}#view.ef .rs-top-moved{padding-bottom:6px;margin-bottom:6px}#view.ef .rs-form-screen .dv-strip{gap:4px 6px}#view.ef .dv-pill{padding:2px 8px;font-size:.76rem}}
 #view.ef>.rs-screen-head{margin-bottom:8px}#view.ef>.rs-screen-head .eyebrow{display:none}#view.ef>.rs-screen-head h2{font-size:1.3rem;margin:0}
 #view.ef .rs-form-screen,#view.ef .rs-out{padding:12px 14px;gap:8px}
 #view.ef .rs-form-screen .dv-strip{margin-top:6px}
@@ -71,7 +78,8 @@
 #view.ef .rs-acphoto{position:relative;display:flex;align-items:center;gap:12px}
 #view.ef .rs-acphoto>#rs-liveries{margin-left:auto}#view.ef #rs-liveries{position:relative}
 #view.ef #rs-liveries .rs-liv{display:none;padding:0;border:0;margin:0;background:none}
-#view.ef #rs-liveries .rs-liv.ef-open{display:block;position:fixed;z-index:1500;overflow:auto;background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 18px 40px -16px rgba(0,0,0,.45)}
+#view.ef #rs-liveries .rs-liv.ef-open{display:none}
+.ef-liv-pop{position:fixed;z-index:1500;overflow:auto;background:var(--sheet);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 18px 40px -16px rgba(0,0,0,.45)}.ef-liv-pop .liv{margin:0}.ef-liv-pop .liv>h3{font-size:.95rem;margin:0 0 6px}
 #view.ef #rs-liveries .rs-liv .liv{margin:0}#view.ef #rs-liveries .rs-liv .liv>h3{font-size:.95rem;margin:0 0 6px!important}
 .ef-liv-t{all:unset;cursor:pointer;display:inline-flex;gap:6px;align-items:center;font-weight:700;font-size:.9rem;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--sheet)}
 .ef-liv-t:hover{border-color:var(--accent)}.ef-liv-t:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

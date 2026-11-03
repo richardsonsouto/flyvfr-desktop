@@ -1,0 +1,7 @@
+{
+  "name": "vfr-visual-test",
+  "private": true,
+  "description": "Teste visual do Virtual Flight Report (telas, tamanhos, temas e idiomas)",
+  "scripts": { "test": "node run.cjs ../../android-app/www ../../test-results/visual" },
+  "dependencies": { "playwright": "1.56.0" }
+}

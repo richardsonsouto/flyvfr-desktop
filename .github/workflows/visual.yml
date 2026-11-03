@@ -1,0 +1,31 @@
+name: Teste visual
+
+on:
+  push:
+    branches: [main, android-app]
+    paths: ["android-app/www/**", "tests/visual/**", ".github/workflows/visual.yml"]
+  workflow_dispatch:
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instalar Playwright
+        working-directory: tests/visual
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Rodar o teste visual
+        working-directory: tests/visual
+        run: node run.cjs ../../android-app/www ../../test-results/visual
+      - name: Guardar prints e relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: teste-visual
+          path: test-results/visual
+          retention-days: 14

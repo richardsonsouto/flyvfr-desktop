@@ -425,3 +425,43 @@
 .fv-tp-i.sel{font-weight:700}.fv-tp-i.sel::after{content:"✓";margin-left:auto;padding-left:12px;color:var(--accent)}
 .fv-tp-all{display:inline-grid;place-items:center;width:38px;height:24px;flex:none;color:var(--muted)}
 .fv-tp-st{display:inline-grid;place-items:center;width:22px;height:22px;flex:none}.fv-tp-st svg{width:18px;height:18px;display:block}
+/* crachá v2: patente com progresso, números do piloto, conquistas, trama de segurança e faixa da companhia */
+.cb-v2{width:340px;position:relative;isolation:isolate}
+.cb-v2::before{content:"";position:absolute;inset:150px 0 0;z-index:-1;opacity:.55;background:repeating-radial-gradient(circle at 50% 0,transparent 0 11px,color-mix(in srgb,var(--cb-a) 9%,transparent) 11px 12px),repeating-linear-gradient(115deg,transparent 0 14px,color-mix(in srgb,var(--cb-b) 5%,transparent) 14px 15px)}
+.cb-v2 .cb-hd{padding:30px 18px 56px;gap:4px}
+.cb-alname{font-weight:800;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;opacity:.95}
+.cb-v2 .cb-hd small{margin-top:4px}
+.cb-v2 .cb-nm{padding:10px 18px 0}.cb-v2 .cb-nm b{font-size:1.2rem}
+.cb-rank{display:flex;align-items:center;gap:12px;margin:10px 22px 4px;padding:10px 12px;border-radius:12px;background:#f6f5f1;border:1px solid #ebe8e0;text-align:left}
+.cb-rank .insignia svg{width:30px;height:auto;display:block}
+.cb-rank-tx{flex:1;min-width:0}.cb-rank-tx b{display:block;font-size:1rem;color:#171717}
+.cb-rank-tx small{display:block;font-size:.72rem;color:#5c5c5c;margin-top:3px}
+.cb-prog{height:6px;border-radius:999px;background:#e3e0d8;overflow:hidden;margin-top:6px}.cb-prog i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--cb-a),var(--cb-b))}
+.cb-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:12px 18px 2px}
+.cb-stats>div{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px;border-radius:10px}
+.cb-stats b{font-size:1.1rem;color:#171717;line-height:1.1}.cb-stats span{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:#6b6b6b}
+.cb-v2 .cb-dl{grid-template-columns:auto auto auto;justify-content:space-between;margin:12px 22px 10px;gap:8px 10px}.cb-v2 .cb-dl dt{white-space:nowrap}
+.cb-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:0 18px 10px}
+.cb-badges span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#fff;border:1px solid #e3e0d8;font-size:15px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.cb-v2 .cb-ft{padding-bottom:14px}
+.cb-stripe{height:8px}
+.cb-box .cb-v2{width:340px}
+@media (max-height:760px){.cb-modal{place-items:start center}.cb-box{margin:8px 0}}
+.cb-hd .cb-al~.cb-alname{display:none}
+/* Frota: "Escalar esta aeronave" quebra em duas linhas se a coluna for estreita, sem invadir a coluna ao lado */
+.loc.loc-choose{white-space:normal;text-align:center;line-height:1.2;justify-content:center;overflow:visible}
+/* lembrete antes do voo (remind.js) */
+.notice.rem-notice{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+.rem-notice.info{background:var(--sheet);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--accent)}
+.rem-notice.warn{background:var(--warn-bg);color:var(--warn);border-left:4px solid var(--warn)}
+.rem-notice.bad{border-left:4px solid var(--bad)}
+.rem-ic{font-size:1.1rem}.rem-tx{flex:1;min-width:220px;font-weight:600}
+.rem-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rem-on{font-size:.8rem;opacity:.85;white-space:nowrap}
+/* ranking de pousos (landrank.js) */
+.lr-kind{margin-right:6px}
+.lr-chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 9px;font-size:.74rem;font-weight:700;white-space:nowrap}
+.lr-chip.ok{background:var(--ok-bg);color:var(--ok)}.lr-chip.warn{background:var(--warn-bg);color:var(--warn)}.lr-chip.bad{background:var(--bad-bg);color:var(--bad)}.lr-chip.neutral{background:var(--sunk,rgba(0,0,0,.05));color:var(--muted)}
+.lr-t td:first-child{font-size:1rem}
+/* briefing no celular: as 4 colunas de estações viram 2, para SIGMET/AIRMET/GAMET não ficarem cortados */
+@media(max-width:520px){.brf-weather-stations{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
