@@ -38,7 +38,7 @@ async function open(b,w,h,theme,lg,port){const p=await b.newPage({viewport:{widt
   await p.evaluate(lg=>{lang=lg;LI=LANGS.indexOf(lg);try{setFormats()}catch(e){}session.user.user_metadata.sims=["msfs2024"];session.user.user_metadata.fav_airline="GOL";
     window.__mine=data.reservations.filter(r=>r.pilotId===myId);render()},lg);await p.waitForTimeout(250);return {p,errs}}
 /* verificações feitas dentro da página */
-const CHECK=(o)=>{const r={};const W=innerWidth,H=innerHeight;r.hscroll=document.documentElement.scrollWidth>W+1;
+const CHECK=(o)=>{const r={};const W=innerWidth,H=innerHeight;r.hscroll=document.documentElement.scrollWidth>W+1;if(r.hscroll){const d=e=>(e.id?'#'+e.id:'')+(typeof e.className==='string'&&e.className?'.'+e.className.trim().split(/\s+/).slice(0,2).join('.'):'')||e.tagName.toLowerCase();r.wide=[...document.body.querySelectorAll('*')].filter(e=>{const b=e.getBoundingClientRect();return b.width>0&&b.right>W+1&&![...e.children].some(c=>c.getBoundingClientRect().right>W+1)}).slice(0,4).map(e=>d(e)+' ('+Math.round(e.getBoundingClientRect().right)+'px)').join(', ')}
   if(o.fit&&W>=761){const v=document.querySelector('#view');r.overHeight=v?Math.round(v.getBoundingClientRect().bottom-H):0}
   r.offscreen=[...document.querySelectorAll('.fv-tp-pop:not([hidden]),#ef-liv-pop,.dv-modal .dv-mbox,.cb-modal .cb-box')].filter(e=>{const b=e.getBoundingClientRect();return b.width&&(b.left<-1||b.right>W+1||(o.vfit&&(b.top<-1||b.bottom>H+1)))}).map(e=>e.className);
   const th=[...document.querySelectorAll('.dv-sat .dv-th rect')].map(x=>x.getBoundingClientRect());let ov=0;for(let i=0;i<th.length;i++)for(let j=i+1;j<th.length;j++){const A=th[i],B=th[j];if(A.left<B.right-1&&B.left<A.right-1&&A.top<B.bottom-1&&B.top<A.bottom-1)ov++}r.labelOverlap=ov;
@@ -61,7 +61,7 @@ const STATES=[
  for(const [w,h] of VIEWPORTS)for(const theme of THEMES)for(const lg of LANGS_T){if(lg!=='pt'&&theme==='dark')continue;
   const {p,errs}=await open(b,w,h,theme,lg,port);
   for(const [name,act,o] of STATES){try{await act(p);await S(500);const r=await p.evaluate(CHECK,o);n++;const tag=`${name} ${w}x${h} ${theme} ${lg}`;
-    if(r.hscroll)fails.push(tag+': rolagem para o lado');if(r.overHeight>0)fails.push(tag+`: Escala passa ${r.overHeight}px da altura da janela`);
+    if(r.hscroll)fails.push(tag+': rolagem para o lado'+(r.wide?' — '+r.wide:''));if(r.overHeight>0)fails.push(tag+`: Escala passa ${r.overHeight}px da altura da janela`);
     if(r.offscreen.length)fails.push(tag+': lista/janela fora da tela ('+r.offscreen.join(', ')+')');if(r.labelOverlap)fails.push(tag+`: ${r.labelOverlap} rótulo(s) do satélite sobrepostos`);
     if(r.clipped.length)warns.push(tag+': texto cortado em botão: '+r.clipped.join(' | '));
     await p.screenshot({path:path.join(OUT,`${name}_${w}x${h}_${theme}_${lg}.png`)})}catch(e){fails.push(`${name} ${w}x${h} ${theme} ${lg}: falhou ao abrir (${e.message.split('\n')[0]})`)}}
