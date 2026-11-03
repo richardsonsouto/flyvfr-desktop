@@ -409,3 +409,19 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .fv-al .al-sym{background:#fff;padding:2px}}
 /* sala de briefing: fontes no fim dos painéis Meteorologia e NOTAM (brieflayout.js) */
 .brf-src{margin:14px 0 0;padding-top:10px;border-top:1px solid var(--line);font-size:.76rem;color:var(--muted);line-height:1.45}
+/* Frota: filtro de tipo com o ícone do fabricante em cada modelo (typepick.js) */
+.fv-tp{position:relative;display:inline-flex;min-width:0}
+.fv-tp>.fv-tp-native{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden}
+.fv-tp-btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--sheet);border-radius:var(--r);padding:6px 10px;color:var(--ink);font-weight:400;max-width:300px;min-height:38px;cursor:pointer;text-align:left}
+.fv-tp-btn:focus-visible,.fv-tp.open .fv-tp-btn{outline:2px solid var(--accent);outline-offset:1px}
+.fv-tp-tx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.fv-tp-caret{margin-left:auto;padding-left:6px;font-size:.8rem;opacity:.75}
+.fv-tp .manufacturer-mark{width:38px;height:24px;padding:2px;border-radius:5px}.fv-tp .manufacturer-icon{width:20px;height:20px}
+.fv-tp .manufacturer-wordmark .manufacturer-icon{width:34px}
+.fv-tp-pop{position:absolute;z-index:60;left:0;top:calc(100% + 4px);min-width:100%;width:max-content;max-width:min(380px,92vw);overflow:auto;background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:4px;box-shadow:0 16px 36px -14px rgba(0,0,0,.45)}
+.fv-tp-pop.up{top:auto;bottom:calc(100% + 4px)}
+.fv-tp-i{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;color:var(--ink);padding:6px 8px;border-radius:6px;text-align:left;cursor:pointer;font-size:.9rem;white-space:nowrap}
+.fv-tp-i:hover,.fv-tp-i:focus-visible{background:var(--accent-soft,rgba(0,0,0,.06));outline:none}
+.fv-tp-i.sel{font-weight:700}.fv-tp-i.sel::after{content:"✓";margin-left:auto;padding-left:12px;color:var(--accent)}
+.fv-tp-all{display:inline-grid;place-items:center;width:38px;height:24px;flex:none;color:var(--muted)}
+.fv-tp-st{display:inline-grid;place-items:center;width:22px;height:22px;flex:none}.fv-tp-st svg{width:18px;height:18px;display:block}
