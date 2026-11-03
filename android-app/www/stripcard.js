@@ -130,11 +130,22 @@ function flapAnimate(){
       scFlapEl(card.querySelector(".bpc-fn"),40)},t0+1200)})}
 /* Escala: o aeródromo de partida (e o aviso de partida) fica no topo, acima de Escala livre e Escala RPL */
 function scMoveDep(){if(typeof view==="undefined"||view!=="roster")return;const top=document.querySelector("#f-rs .rs-top-fields"),mode=document.querySelector(".rs-mode-field");
+  /* Escala RPL é a prioridade: vem antes da Escala livre */
+  const ms=mode&&mode.querySelector(".rs-modes"),rpl=ms&&ms.querySelector(":scope>.rs-rpl-option");if(rpl&&ms.firstElementChild!==rpl)ms.prepend(rpl);
   if(!top||!mode)return;top.classList.add("rs-top-moved");mode.before(top);const n=mode.parentElement.querySelector(".sd-note");if(n){n.classList.add("rs-top-note");top.append(n)}}
+/* piloto de companhia: ao abrir o menu Escala, começa sempre na Escala RPL (se não houver RPL na partida, o app volta sozinho para a livre).
+   Não mexe se já há escala gerada, se veio de "voar esta aeronave" (escala livre) ou se o piloto é freelancer. */
+const RPLF={want:true};
+document.addEventListener("click",e=>{const el=e.target.closest&&e.target.closest('[data-view="roster"],[data-action="go-roster"]');if(!el)return;
+  RPLF.want=!(el.dataset.free==="1"||el.dataset.ac)},true);
+function rplFirst(){if(!RPLF.want||typeof view==="undefined"||view!=="roster")return;RPLF.want=false;
+  if(typeof RS==="undefined"||RS.roster||RS.busy||!RS.other)return;if(typeof FL!=="undefined"&&FL.mode==="freelancer")return;
+  RS.other=false;RS.pf=null;RS.ac="";RS.err="";if(typeof rsSoonest==="function")RS.start=rsSoonest()}
+if(typeof render==="function"){const rplRender=render;render=function(){try{rplFirst()}catch(e){}return rplRender.apply(this,arguments)}}
 if(typeof render==="function"){const scDepRender=render;render=function(){const r=scDepRender.apply(this,arguments);try{scMoveDep()}catch(e){}return r}}
 /* Escala: o aeródromo de partida ganha imagem de satélite (com vento e cabeceira favorecida por cima)
    e uma faixa com cidade, tempo (VFR/IFR), pista, vento e saídas RPL das próximas 6 h */
-const DV_T={rwy:["Runway","Pista","Pista","Piste","Piste","滑走路","跑道","활주로"],wind:["Wind","Vento","Viento","Vent","Wind","風","风","바람"],
+const DV_T={zoom:["Tap to enlarge","Toque para ampliar","Toque para ampliar","Touchez pour agrandir","Zum Vergrößern tippen","タップで拡大","点击放大","탭하여 확대"],close:["Close","Fechar","Cerrar","Fermer","Schließen","閉じる","关闭","닫기"],rwy:["Runway","Pista","Pista","Piste","Piste","滑走路","跑道","활주로"],wind:["Wind","Vento","Viento","Vent","Wind","風","风","바람"],
  fav:["favours","favorece","favorece","favorise","begünstigt","有利:","有利于","유리:"],head:["headwind","proa","de frente","de face","Gegenwind","向かい風","顶风","정풍"],
  calm:["calm","calmo","calma","calme","Windstille","静穏","静风","무풍"],vrb:["variable","variável","variable","variable","umlaufend","不定","不定","가변"],
  rpl:["{n} RPL departures in the next 6 h","{n} saídas RPL nas próximas 6 h","{n} salidas RPL en las próximas 6 h","{n} départs RPL dans les 6 prochaines heures","{n} RPL-Abflüge in den nächsten 6 Std.","今後6時間のRPL出発 {n} 便","未来 6 小时 RPL 离港 {n} 班","향후 6시간 RPL 출발 {n}편"]};
@@ -145,10 +156,37 @@ function dvFav(ident,w){if(!ident||!w||w.dir==null||!w.spd)return null;const [a,
   const c=Math.round(w.spd*Math.cos((w.dir-h*10)*Math.PI/180));return{end:c>=0?a:b,kt:Math.abs(c)}}
 function dvRplCount(icao){try{if(!SCHED||!SCHED.idx||typeof realDeps!=="function")return 0;const t0=Date.now(),t1=t0+6*36e5;let n=0;
   for(const code in SCHED.idx){if((SCHED.idx[code]||{})[icao])n+=realDeps(code,icao,t0,t1).length}return n}catch(e){return 0}}
-function dvSat(icao,ap,rw){const z=rw&&rw.m>=3000?13:14,n=2**z,lat=ap[0],lon=ap[1],x=(lon+180)/360*n,lr=lat*Math.PI/180,y=(1-Math.log(Math.tan(lr)+1/Math.cos(lr))/Math.PI)/2*n;
-  const tx=Math.floor(x),ty=Math.floor(y),ox=(x-tx)*256,oy=(y-ty)*256;let imgs="";
-  for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++)imgs+=`<img alt="" decoding="async" src="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${ty+j}/${tx+i}">`;
-  return`<div class="dv-tiles" style="left:calc(50% - ${(256+ox).toFixed(1)}px);top:calc(50% - ${(256+oy).toFixed(1)}px)">${imgs}</div><span class="dv-pin" aria-hidden="true"></span><span class="dv-att">Esri</span>`}
+/* satélite do aeródromo: enquadra TODAS as pistas (cabeceiras do OurAirports em rwyends.json) com zoom fracionado;
+   cabeceiras rotuladas, a favorecida pelo vento em verde; sem dados de pista, centra no ponto do aeródromo */
+const dvW=(lat,lon)=>{const r=lat*Math.PI/180;return[(lon+180)/360*256,(1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*256]};
+function dvEnds(icao){if(DV.ends)return DV.ends[icao]||null;if(!DV.endsP)DV.endsP=fetch("rwyends.json?v=569").then(r=>r.ok?r.json():null).then(j=>{DV.ends=(j&&j.ends)||{};try{scDepVisual()}catch(e){}}).catch(()=>{DV.ends={}});return null}
+function dvSat(icao,ap,rw,W,H,fav){W=W||156;H=H||104;const ends=dvEnds(icao)||[],pts=[];ends.forEach(e=>{pts.push(dvW(e[1],e[2]),dvW(e[4],e[5]))});
+  let zf;const c=[0,0];
+  if(pts.length){const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+    c[0]=(x0+x1)/2;c[1]=(y0+y1)/2;const dx=Math.max(x1-x0,1e-6),dy=Math.max(y1-y0,1e-6);
+    zf=Math.min(Math.log2(W*.74/dx),Math.log2(H*.62/dy),16.5);c[1]+=6/(2**zf)}   /* desce um pouco: espaço para o chip embaixo */
+  else{const p=dvW(ap[0],ap[1]);c[0]=p[0];c[1]=p[1];zf=rw&&rw.m>=3000?13:14}
+  zf=Math.max(10,zf);const z=Math.min(18,Math.ceil(zf)),s=2**(zf-z),n=2**z,cx=c[0]*n,cy=c[1]*n;
+  const hw=W/2/s+2,hh=H/2/s+2,tx0=Math.floor((cx-hw)/256),tx1=Math.floor((cx+hw)/256),ty0=Math.max(0,Math.floor((cy-hh)/256)),ty1=Math.min(n-1,Math.floor((cy+hh)/256));let imgs="";
+  for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++)imgs+=`<img alt="" decoding="async" style="left:${(tx*256-cx).toFixed(1)}px;top:${(ty*256-cy).toFixed(1)}px" src="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${ty}/${((tx%n)+n)%n}">`;
+  let svg="";if(ends.length){const P=(la,lo)=>{const w=dvW(la,lo);return[(w[0]*n-cx)*s+W/2,(w[1]*n-cy)*s+H/2]};const big=W>300,lb=[];
+    ends.forEach(e=>{const A=P(e[1],e[2]),B=P(e[4],e[5]),L=Math.hypot(B[0]-A[0],B[1]-A[1])||1,ux=(B[0]-A[0])/L,uy=(B[1]-A[1])/L,o=big?16:11;
+      svg+=`<line x1="${A[0].toFixed(1)}" y1="${A[1].toFixed(1)}" x2="${B[0].toFixed(1)}" y2="${B[1].toFixed(1)}" class="dv-rl"/>`;
+      lb.push({id:e[0],x:A[0]-ux*o,y:A[1]-uy*o},{id:e[3],x:B[0]+ux*o,y:B[1]+uy*o})});
+    /* pistas paralelas próximas: as cabeceiras que se sobrepõem viram um rótulo só, com o número (ex.: 02L e 02R → 02) */
+    /* rótulos que se encostam: mesma cabeceira (02L/02R) vira um só com o número; cabeceiras diferentes, o segundo desce/sobe */
+    const cwL=big?8.8:6.8,pdL=big?12:8,hL=big?18:14,wOf=l=>l.id.length*cwL+pdL,hit=(A,B)=>Math.abs(A.x-B.x)<(wOf(A)+wOf(B))/2+3&&Math.abs(A.y-B.y)<hL+3;
+    const keep=l=>big||!fav||parseInt(l.id,10)===parseInt(fav.end,10);for(let k=lb.length-1;k>=0;k--)if(!keep(lb[k]))lb.splice(k,1);
+    const clampL=l=>{const w=wOf(l)/2+2;l.x=Math.max(w,Math.min(W-w,l.x));l.y=Math.max(hL/2+2,Math.min(H-hL/2-2,l.y));if(!big&&l.x>W-50&&l.y<46)l.y=48};lb.forEach(clampL);
+    for(let pass=0;pass<3;pass++)for(let i=0;i<lb.length;i++)for(let j=i+1;j<lb.length;j++){const A=lb[i],B=lb[j];if(!A||!B||!hit(A,B))continue;
+      if(parseInt(A.id,10)===parseInt(B.id,10)){lb[i]={id:String(parseInt(A.id,10)).padStart(2,"0"),x:(A.x+B.x)/2,y:(A.y+B.y)/2};lb[j]=null}
+      else{B.y+=(B.y>=A.y&&B.y+hL+4<H?1:-1)*(hL+4);clampL(B)}}
+    /* no quadro pequeno só a cabeceira favorecida pelo vento (as outras ficam no ampliado) */
+    const favN=fav?parseInt(fav.end,10):NaN;lb.filter(Boolean).filter(l=>big||parseInt(l.id,10)===favN).forEach(({id,x,y})=>{const f=parseInt(id,10)===favN,cw=big?8.8:6.8,pd=big?12:8;
+      x=Math.max(id.length*cw/2+pd/2+2,Math.min(W-id.length*cw/2-pd/2-2,x));y=Math.max(big?11:9,Math.min(H-(big?11:9),y));if(!big&&x>W-50&&y<46)y=48;
+      svg+=`<g class="dv-th${f?" fav":""}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><rect x="${(-(id.length*cw+pd)/2).toFixed(1)}" y="${big?-9:-7}" width="${(id.length*cw+pd).toFixed(1)}" height="${big?18:14}" rx="4"/><text y="${big?4.5:3.5}">${esc(id)}</text></g>`});
+    svg=`<svg class="dv-ov" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">${svg}</svg>`}
+  return`<div class="dv-tiles" style="transform:translate(${W/2}px,${H/2}px) scale(${s.toFixed(4)})">${imgs}</div>${svg||'<span class="dv-pin" aria-hidden="true"></span>'}<span class="dv-att">Esri</span>`}
 function scDepVisual(){if(typeof view==="undefined"||view!=="roster")return;const top=document.querySelector(".rs-top-moved"),comp=top&&top.querySelector(".rs-origin-compact");if(!comp)return;
   const icao=(RS.dep||"").toUpperCase(),ap=typeof AIRPORTS!=="undefined"&&AIRPORTS&&AIRPORTS[icao];
   let sat=comp.querySelector(".dv-sat"),strip=top.querySelector(".dv-strip");
@@ -157,7 +195,7 @@ function scDepVisual(){if(typeof view==="undefined"||view!=="roster")return;cons
   const wx=(typeof WX_CACHE!=="undefined"&&WX_CACHE[icao]&&WX_CACHE[icao].data)||null,w=wx&&dvWind(wx.metar),fav=dvFav(rw&&rw.ident,w);
   const key=icao+"|"+(rw?rw.ident:"")+"|"+(wx?wx.metar:"");
   if(!sat){sat=document.createElement("div");sat.className="dv-sat";comp.insertBefore(sat,comp.querySelector(".rs-dep-info")||null)}
-  if(sat.dataset.icao!==icao){sat.dataset.icao=icao;sat.innerHTML=dvSat(icao,ap,rw);sat.hidden=false;sat.querySelectorAll("img").forEach(im=>im.addEventListener("error",()=>{sat.hidden=true},{once:true}))}
+  const sk=icao+"|"+(DV.ends?1:0)+"|"+(fav?fav.end:"");if(sat.dataset.icao!==sk){sat.dataset.icao=sk;const cs=getComputedStyle(sat);sat.innerHTML=dvSat(icao,ap,rw,parseFloat(cs.width),parseFloat(cs.height),fav);sat.dataset.zoom=icao;sat.title=dvT("zoom");sat.hidden=false;sat.querySelectorAll("img").forEach(im=>im.addEventListener("error",()=>{sat.hidden=true},{once:true}))}
   sat.querySelectorAll(".dv-wind,.dv-rchip").forEach(e=>e.remove());
   if(w&&w.dir!=null&&w.spd){const r=(w.dir+90)*Math.PI/180,x1=13-Math.cos(r)*9,y1=13-Math.sin(r)*9,x2=13+Math.cos(r)*9,y2=13+Math.sin(r)*9;
     sat.insertAdjacentHTML("beforeend",`<span class="dv-wind" title="${esc(dvT("wind")+" "+String(w.dir).padStart(3,"0")+"° "+w.spd+" kt")}"><svg viewBox="0 0 26 26"><defs><marker id="dvh" viewBox="0 0 6 6" refX="3" refY="3" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0 6 3 0 6Z" fill="#7fc4ff"/></marker></defs><path d="M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="#7fc4ff" stroke-width="2.4" marker-end="url(#dvh)"/></svg></span>`)}
@@ -172,6 +210,16 @@ function scDepVisual(){if(typeof view==="undefined"||view!=="roster")return;cons
     strip.innerHTML=pills.join("")}
   if(!rw&&!DV.rw&&typeof mapLoadRunways==="function"){DV.rw=true;mapLoadRunways().then(()=>scDepVisual()).catch(()=>{})}
   if(!wx&&!DV.wx[icao]&&typeof fetchWx==="function"){DV.wx[icao]=1;fetchWx(icao).then(()=>scDepVisual()).catch(()=>{})}}
+/* satélite ampliado: toque no quadro abre o aeródromo inteiro em tamanho grande, com as cabeceiras e o vento */
+function dvBig(){const icao=(RS.dep||"").toUpperCase(),ap=AIRPORTS&&AIRPORTS[icao];if(!ap)return;document.querySelectorAll(".dv-modal").forEach(x=>x.remove());
+  const rw=(typeof MAP_TOOLS!=="undefined"&&MAP_TOOLS.runways&&MAP_TOOLS.runways.runways||{})[icao]||null,wx=(typeof WX_CACHE!=="undefined"&&WX_CACHE[icao]&&WX_CACHE[icao].data)||null,w=wx&&dvWind(wx.metar),fav=dvFav(rw&&rw.ident,w);
+  const W=Math.min(720,innerWidth-32),H=Math.round(Math.min(W*.66,innerHeight-140)),m=document.createElement("div");m.className="dv-modal";
+  m.innerHTML=`<div class="dv-mbox" role="dialog" aria-modal="true" aria-label="${esc(icao)}"><div class="dv-mhd"><b>${esc(icao)}</b><span>${esc(ap[3]||"")}${ap[4]?` · ${esc(ap[4])}`:""}</span><button type="button" class="btn small" data-action="dv-close">${esc(dvT("close"))}</button></div><div class="dv-sat dv-big" style="width:${W}px;height:${H}px">${dvSat(icao,ap,rw,W,H,fav)}</div></div>`;
+  const big=m.querySelector(".dv-big");const ws=document.querySelector(".rs-top-moved .dv-sat .dv-wind"),rc=document.querySelector(".rs-top-moved .dv-sat .dv-rchip");if(ws)big.appendChild(ws.cloneNode(true));if(rc)big.appendChild(rc.cloneNode(true));
+  document.body.appendChild(m);m.querySelector('[data-action="dv-close"]').focus()}
+document.addEventListener("click",e=>{const t=e.target;if(!t.closest)return;if(t.closest('[data-action="dv-close"]')||t.classList.contains("dv-modal")){document.querySelectorAll(".dv-modal").forEach(x=>x.remove());return}
+  const s=t.closest(".rs-top-moved .dv-sat");if(s){e.preventDefault();dvBig()}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".dv-modal").forEach(x=>x.remove())});
 if(typeof render==="function"){const dvRender=render;render=function(){const r=dvRender.apply(this,arguments);try{scDepVisual()}catch(e){}return r}}
 document.addEventListener("input",e=>{if(e.target&&e.target.id==="rs-dep")setTimeout(()=>{try{scDepVisual()}catch(x){}},80)});
 document.addEventListener("change",e=>{if(e.target&&e.target.id==="rs-dep")setTimeout(()=>{try{scDepVisual()}catch(x){}},80)});

@@ -371,3 +371,26 @@
 .cb-btns{display:flex;gap:8px}
 @keyframes cbFade{from{opacity:0}}@keyframes cbIn{from{opacity:0;transform:translateY(18px) rotate(-3deg) scale(.96)}}
 @media (prefers-reduced-motion:reduce){.cb-modal,.cb-box{animation:none}.cb-mini{transition:none}}
+
+/* satélite do aeródromo enquadrando todas as pistas (v569) */
+.dv-tiles{left:0;top:0;width:0;height:0;display:block;transform-origin:0 0}
+.dv-tiles img{position:absolute}
+.rs-top-moved .dv-sat{cursor:zoom-in}
+.dv-ov{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.dv-rl{stroke:rgba(255,255,255,.5);stroke-width:1.4;stroke-linecap:round}
+.dv-th rect{fill:rgba(0,0,0,.7)}
+.dv-th text{fill:#fff;font:700 9px var(--f-mono,ui-monospace),monospace;text-anchor:middle}
+.dv-th.fav rect{fill:#0d3b22;stroke:#6fe3a2;stroke-width:1}
+.dv-th.fav text{fill:#6fe3a2}
+.dv-big .dv-th text{font-size:12px}
+.dv-big .dv-rl{stroke-width:2}
+.dv-modal{position:fixed;inset:0;z-index:2000;background:rgba(8,12,18,.66);display:grid;place-items:center;padding:16px;animation:cbFade .18s ease}
+.dv-mbox{background:var(--sheet,#fff);color:var(--ink);border-radius:14px;padding:12px;box-shadow:0 24px 60px -20px rgba(0,0,0,.6);max-width:100%}
+.dv-mhd{display:flex;align-items:center;gap:10px;margin:0 2px 10px}.dv-mhd b{font-family:var(--f-mono,ui-monospace),monospace}.dv-mhd span{color:var(--muted);font-size:.88rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dv-sat.dv-big{position:relative;border-radius:10px;max-width:100%;cursor:default;align-self:auto}
+.dv-big .dv-wind{width:46px;height:46px}.dv-big .dv-wind svg{width:34px;height:34px}.dv-big .dv-rchip{font-size:12px;padding:3px 8px;left:8px;bottom:8px}
+.rs-top-moved .dv-sat .dv-rchip{display:none}
+/* aviso no seletor de matrícula: só matrículas com pintura para os simuladores do piloto (livfilter.js) */
+.acp-livnote{margin:0;padding:6px 10px;font-size:.78rem;color:var(--muted);border-bottom:1px solid var(--line);background:var(--sunk,rgba(0,0,0,.03))}
+.acp-livnote .linkish{font-size:inherit}
+.rdi-list .acp-livnote{border-radius:6px 6px 0 0}
