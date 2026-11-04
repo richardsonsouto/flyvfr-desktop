@@ -465,3 +465,5 @@
 .lr-t td:first-child{font-size:1rem}
 /* briefing no celular: as 4 colunas de estações viram 2, para SIGMET/AIRMET/GAMET não ficarem cortados */
 @media(max-width:520px){.brf-weather-stations{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+/* avisos (chips) no cabeçalho da tela quebram a linha no celular em vez de alargar a página */
+#view .sec-head .chip{white-space:normal;overflow-wrap:anywhere;max-width:100%}
