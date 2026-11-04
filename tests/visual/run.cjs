@@ -45,6 +45,7 @@ const CHECK=(o)=>{try{document.getAnimations().forEach(a=>{try{a.finish()}catch(
   r.clipped=[...document.querySelectorAll('#view .btn,#view .seg button,.fv-tp-btn,.loc-choose,.rs-mode-card')].filter(e=>e.offsetParent&&e.scrollWidth>e.clientWidth+2&&getComputedStyle(e).textOverflow!=='ellipsis').map(e=>e.textContent.trim().slice(0,40));return r};
 const S=ms=>new Promise(r=>setTimeout(r,ms));
 const STATES=[
+ ['home',async p=>{await p.evaluate(()=>{view="home";render()})},{}],
  ['fleet',async p=>{await p.evaluate(()=>{view="fleet";render()})},{}],
  ['fleet-type-open',async p=>{await p.evaluate(()=>{view="fleet";render()});await p.click('.tp-type .fv-tp-btn').catch(()=>{})},{vfit:0}],
  ['roster-rpl',async p=>{await p.evaluate(async()=>{data.reservations=data.reservations.filter(r=>r.pilotId!==myId);RPLF.want=false;RS.roster=null;RS.dep="SBRJ";RS.other=false;RS.pf=null;view="roster";render();await new Promise(r=>setTimeout(r,900));document.querySelector('[data-action="rs-pf"]')?.click()})},{fit:1}],
