@@ -3,7 +3,7 @@
    Os arquivos-fonte continuam na pasta do site para edição; depois de editar qualquer um deles, rode este script de novo.
    Só entram arquivos sem "use strict" no topo e sem declarações repetidas (verificado no teste de empacotamento). */
 const fs=require('fs'),path=require('path');
-const SRC=["stripcard.js","reviewsview.js","mapslim.js","rosterbreak.js","rsflip.js","cracha.js","livfilter.js","escfit.js","regionicon.js","typepick.js","remind.js","landrank.js","career2.js","lbcards.js","home.js"];
+const SRC=["stripcard.js","reviewsview.js","mapslim.js","rosterbreak.js","rsflip.js","cracha.js","livfilter.js","escfit.js","regionicon.js","typepick.js","remind.js","landrank.js","career2.js","lbcards.js","home.js","ops.js"];
 (async()=>{const dir=path.resolve(process.argv[2]||'.');const {minify}=require('terser');
  let code="";for(const f of SRC){const s=fs.readFileSync(path.join(dir,f),'utf8');if(/^\s*(\/\*[\s\S]*?\*\/\s*)?["']use strict["']/.test(s))throw new Error(f+" usa 'use strict' e não pode entrar no pacote");code+=`\n/* ===== ${f} ===== */\n`+s+"\n;\n"}
  const r=await minify(code,{ecma:2020,compress:{passes:1,keep_fnames:true,keep_classnames:true},mangle:false,format:{comments:false}});

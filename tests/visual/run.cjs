@@ -46,6 +46,7 @@ const CHECK=(o)=>{try{document.getAnimations().forEach(a=>{try{a.finish()}catch(
 const S=ms=>new Promise(r=>setTimeout(r,ms));
 const STATES=[
  ['home',async p=>{await p.evaluate(()=>{view="home";render()})},{}],
+ ['ops',async p=>{await p.evaluate(()=>{view="ops";render()});await new Promise(r=>setTimeout(r,1200))},{}],
  ['fleet',async p=>{await p.evaluate(()=>{view="fleet";render()})},{}],
  ['fleet-type-open',async p=>{await p.evaluate(()=>{view="fleet";render()});await p.click('.tp-type .fv-tp-btn').catch(()=>{})},{vfit:0}],
  ['roster-rpl',async p=>{await p.evaluate(async()=>{data.reservations=data.reservations.filter(r=>r.pilotId!==myId);RPLF.want=false;RS.roster=null;RS.dep="SBRJ";RS.other=false;RS.pf=null;view="roster";render();await new Promise(r=>setTimeout(r,900));document.querySelector('[data-action="rs-pf"]')?.click()})},{fit:1}],
