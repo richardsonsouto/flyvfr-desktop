@@ -467,3 +467,8 @@
 @media(max-width:520px){.brf-weather-stations{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 /* avisos (chips) no cabeçalho da tela quebram a linha no celular em vez de alargar a página */
 #view .sec-head .chip{white-space:normal;overflow-wrap:anywhere;max-width:100%}
+/* mapas no tema escuro: ruas/relevo invertidos e satélite escurecido; segue o tema na hora em que ele muda */
+:root[data-theme="dark"] .vfr-tl-map{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.6)}
+:root[data-theme="dark"] .vfr-tl-sat{filter:brightness(.62) contrast(1.05) saturate(.8)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .vfr-tl-map{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.6)}:root:not([data-theme="light"]) .vfr-tl-sat{filter:brightness(.62) contrast(1.05) saturate(.8)}}
+@media print{.vfr-tl-map,.vfr-tl-sat{filter:none!important}}

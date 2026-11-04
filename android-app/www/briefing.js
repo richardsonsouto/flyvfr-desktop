@@ -423,10 +423,10 @@ function brfPrint(){
 
 /* ---------- mapas de fundo e tráfego (FlyVFR, VATSIM e IVAO) ---------- */
 function brfBaseLayers(Lf){
-  const dk=isDark()?"tiles-dark":"";
+  const dk="vfr-tl-map";/* o tema escuro é aplicado pelo CSS (troca na hora, sem recriar o mapa) */
   return{
     [t("brf_m_osm")]:Lf.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,className:dk,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}),
-    [t("brf_m_sat")]:Lf.layerGroup([Lf.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Imagery &copy; Esri, Maxar, Earthstar Geographics"}),
+    [t("brf_m_sat")]:Lf.layerGroup([Lf.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,className:"vfr-tl-sat",attribution:"Imagery &copy; Esri, Maxar, Earthstar Geographics"}),
       Lf.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19})]),
     [t("brf_m_topo")]:Lf.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{maxZoom:17,subdomains:"abc",className:dk,attribution:'&copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'})}}
 function brfOverlays(Lf){

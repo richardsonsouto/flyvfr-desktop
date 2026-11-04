@@ -308,7 +308,7 @@ async function initMap(){
     const sv=(e,on)=>{try{const s=JSON.parse(localStorage.getItem("vfr-map-ov")||"{}");s[e.layer.options.key]=on;localStorage.setItem("vfr-map-ov",JSON.stringify(s))}catch(x){}mapTraffic(true)};
     m.on("overlayadd",e=>sv(e,true));m.on("overlayremove",e=>sv(e,false));m.on("moveend",()=>mapTraffic());
     setTimeout(()=>mapTraffic(true),300)}
-  else Lf.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,className:isDark()?"tiles-dark":"",attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
+  else Lf.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,className:"vfr-tl-map",attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
   const {groups,flying}=mapData(),css=getComputedStyle(document.documentElement),acc=css.getPropertyValue("--accent").trim()||"#0B6A93",bad=css.getPropertyValue("--bad").trim()||"#B42318",warn=css.getPropertyValue("--warn").trim()||"#8F5400";
   for(const [icao,list] of Object.entries(groups)){const ll=apLL(icao);if(!ll)continue;
     const nb=list.filter(a=>statusOf(a.id).key==="bad").length,nw=list.filter(a=>statusOf(a.id).key==="warn").length;
