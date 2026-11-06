@@ -3,7 +3,8 @@
   "appName": "Virtual Flight Report",
   "webDir": "www",
   "android": {
-    "backgroundColor": "#13202E"
+    "backgroundColor": "#13202E",
+    "adjustMarginsForEdgeToEdge": "auto"
   },
   "server": {
     "androidScheme": "https"
