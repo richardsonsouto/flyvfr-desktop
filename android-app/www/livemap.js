@@ -28,8 +28,11 @@ let liveT=0;
 function liveChanged(){
   if(view!=="map")return;const now=Date.now();
   if(now-liveT<500){clearTimeout(liveChanged.t);liveChanged.t=setTimeout(liveChanged,600);return}liveT=now;
-  /* um voo começou ou terminou: redesenha a tela (sai da lista estimada); senão só move os aviões */
-  if([...liveAcIds()].sort().join()!==liveDrawn){render();return}
+  const tracked=[...liveAcIds()].sort().join();
+  if(tracked!==liveDrawn && MAPV.map?.refreshFleetMarkers){
+    MAPV.map.refreshFleetMarkers();
+    liveDrawn=tracked;
+  }
   if(MAPV.map&&liveLayer)drawLive(MAPV.map);
   const box=$("#map-live");if(box)box.innerHTML=liveListHTML();
 }

@@ -117,17 +117,24 @@ async function toggleFav(id){
 const STAR='<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-2.9-5.4 2.9 1.1-6-4.5-4.2 6.1-.8z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 const favBtn=(id,big)=>{const on=isFav(id),l=t(on?"fav_remove":"fav_add");return`<button type="button" class="fav${on?" on":""}${big?" big":""}" data-action="fav" data-id="${esc(id)}" aria-pressed="${on}" title="${l}" aria-label="${l}">${STAR}${big?`<span>${t(on?"fav_on":"fav_add")}</span>`:""}</button>`};
 const reloadTimers={};
-function scheduleReload(table){clearTimeout(reloadTimers[table]);reloadTimers[table]=setTimeout(async()=>{await load(table);render()},350)}
+function refreshBackgroundView(){
+  if(view==="map" && MAPV.map?.getContainer().isConnected && MAPV.map.refreshFleetMarkers){
+    MAPV.map.refreshFleetMarkers();
+    return;
+  }
+  render();
+}
+function scheduleReload(table){clearTimeout(reloadTimers[table]);reloadTimers[table]=setTimeout(async()=>{await load(table);refreshBackgroundView()},350)}
 let channel=null;
 function subscribe(){
   if(channel)return;
   channel=sb.channel("vfr-live");
   for(const tb of ["aircraft","reservations","flights","defects","profiles"])
     channel.on("postgres_changes",{event:"*",schema:"public",table:tb},()=>scheduleReload(tb));
-  channel.on("postgres_changes",{event:"*",schema:"public",table:"events"},()=>{clearTimeout(reloadTimers.ev);reloadTimers.ev=setTimeout(async()=>{await loadEvents();render()},350)});
+  channel.on("postgres_changes",{event:"*",schema:"public",table:"events"},()=>{clearTimeout(reloadTimers.ev);reloadTimers.ev=setTimeout(async()=>{await loadEvents();refreshBackgroundView()},350)});
   channel.on("postgres_changes",{event:"*",schema:"public",table:"blocked_users"},()=>{clearTimeout(reloadTimers.bl);reloadTimers.bl=setTimeout(async()=>{await loadBlocked();render()},350)});
   for(const tb of ["support_settings","support_months"])
-    channel.on("postgres_changes",{event:"*",schema:"public",table:tb},()=>{clearTimeout(reloadTimers.sup);reloadTimers.sup=setTimeout(async()=>{await loadSupport();render()},350)});
+    channel.on("postgres_changes",{event:"*",schema:"public",table:tb},()=>{clearTimeout(reloadTimers.sup);reloadTimers.sup=setTimeout(async()=>{await loadSupport();refreshBackgroundView()},350)});
   channel.subscribe();
 }
 /* Último estado conhecido, para abrir sem internet */
@@ -527,7 +534,7 @@ function entryHTML(f,no,showPlate){
   const a=acById(f.aircraftId),ds=data.defects.filter(d=>d.flightId===f.id).sort((x,y)=>x.createdAt-y.createdAt);
   return`<div class="entry"><div><div class="tlno">TL ${String(no).padStart(4,"0")}</div><div class="muted" style="font-size:.8rem">${df.format(f.createdAt)}</div></div>
    <div class="entry-main"><div class="row" style="gap:10px">${showPlate?`${regTag(a,f.aircraftId)}`:""}<span class="mono" style="font-weight:600">${esc(f.dep)} → ${esc(f.arr)}</span>
-   <span class="muted" style="font-size:.85rem">${esc(pilot(f.pilotId))} · ${esc(simName(f.simulator))} · ${t("block")} ${block(f.blockMin||0)}${f.landingFpm!=null?` · ${t("trk_landing")} ${f.landingFpm} fpm`:""}</span>${vChip(f)}</div>
+   <span class="muted" style="font-size:.85rem">${esc(pilot(f.pilotId))} · ${esc(simName(f.simulator))} · ${t("block")} ${block(f.blockMin||0)}${f.landingFpm!=null?` · ${t("trk_landing")} ${f.landingFpm} fpm`:""}</span>${vChip(f)} ${pilotReplayButton(f)}</div>
    ${f.remarks?`<div style="font-size:.9rem">${esc(f.remarks)}</div>`:""}
    ${ds.length?ds.map(defectHTML).join(""):`<div class="muted" style="font-size:.85rem">${t("no_def_entry")}</div>`}</div></div>`;
 }
@@ -570,7 +577,7 @@ function lbPilotView(pid){
   const byAl=groupHours(all,f=>ac(f)?.airline).map(r=>({...r,label:`<span class="lb-airline">${alSym(r.k)}<span>${esc(r.k)}</span></span>`}));
   const bySim=groupHours(all,f=>f.simulator).map(r=>({...r,label:esc(simName(r.k))}));
   const byReg=groupHours(all,f=>f.aircraftId).slice(0,10).map(r=>({...r,label:`${regTag(acById(r.k),r.k)}`}));
-  const rows=every.map(f=>{const a=ac(f);return`<tr class="${counts(f)?"":"nv"}"><td class="mono">${dateF(f.createdAt)}</td><td>${regTag(a,f.aircraftId)}</td><td>${esc(a?.type||"")}</td><td class="mono">${fnoChip(fnoOf(f))} ${esc(f.dep)} → ${esc(f.arr)} ${vChip(f)}</td><td class="num mono">${block(f.blockMin||0)}</td><td>${esc(simName(f.simulator))}</td><td class="mono muted">TL ${String(nos[f.id]||0).padStart(4,"0")}</td></tr>`}).join("");
+  const rows=every.map(f=>{const a=ac(f);return`<tr class="${counts(f)?"":"nv"}"><td class="mono">${dateF(f.createdAt)}</td><td>${regTag(a,f.aircraftId)}</td><td>${esc(a?.type||"")}</td><td class="mono">${fnoChip(fnoOf(f))} ${esc(f.dep)} → ${esc(f.arr)} ${vChip(f)} ${pilotReplayButton(f)}</td><td class="num mono">${block(f.blockMin||0)}</td><td>${esc(simName(f.simulator))}</td><td class="mono muted">TL ${String(nos[f.id]||0).padStart(4,"0")}</td></tr>`}).join("");
   return`${other?`<div class="notice">${t("lb_viewing",{p:esc(pilot(pid))})} <button class="linkish" data-action="lb-me">${t("lb_back_me")}</button></div>`:""}
    <div class="panel"><div class="sec-head"><h3>${esc(names[pid]||pilot(pid)||"")}</h3>${every.length?`<button class="btn small" data-action="lb-csv" data-p="${esc(pid)}">${t("lb_csv")}</button>`:""}</div>
     <div class="stats lb-stats"><span><b>${block(sum(all))}</b>${t("lb_total")}</span><span><b>${all.length}</b>${t("lb_flights")}</span><span><b>${block(sum(all.filter(f=>f.createdAt>=d30)))}</b>${t("lb_30d")}</span><span><b>${block(sum(all.filter(f=>f.createdAt>=y0)))}</b>${t("lb_year")}</span><span><b>${new Set(all.map(f=>f.aircraftId)).size}</b>${t("lb_regs")}</span><span><b>${airports.size}</b>${t("lb_airports")}</span></div></div>
@@ -2080,5 +2087,5 @@ document.addEventListener("click",async e=>{
   if(installPrompt){const p=installPrompt;installPrompt=null;try{p.prompt();const r=await p.userChoice;if(r&&r.outcome==="accepted"){paintChrome();return}}catch(x){}paintMe();return}
   sheetInstall()});
 if("serviceWorker" in navigator&&location.protocol!=="file:"&&!window.vfrNative)navigator.serviceWorker.register("sw.js").catch(()=>{});
-setInterval(()=>{if(session&&!document.hidden&&!(document.activeElement&&document.activeElement.id==="f-q"))render()},30000);
+setInterval(()=>{if(session&&!document.hidden&&view!=="map"&&!(document.activeElement&&document.activeElement.id==="f-q"))render()},30000);
 render();

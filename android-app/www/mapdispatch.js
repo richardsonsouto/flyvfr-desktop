@@ -25,7 +25,7 @@ async function mapDispatchSync(m,Lf,force=false){if(view!=='map'||MAPV.map!==m||
  const S=MAP_TOOLS;S.dep=p.dep;S.arr=p.arr;S.selected=p.dep;S.ac=fleet.find(a=>regKey(a.registration)===regKey(p.reg))?.id||'';
  for(const [id,value] of [['map-plan-dep',S.dep],['map-plan-arr',S.arr],['map-explore-code',S.dep]]){const input=document.getElementById(id);if(input)input.value=value}
  const select=document.getElementById('map-plan-ac');if(select){const a=acById(S.ac);if(a&&![...select.options].some(o=>o.value===a.id)){const option=document.createElement('option');option.value=a.id;option.textContent=[a.registration,a.type,a.airline].filter(Boolean).join(' · ');select.append(option)}select.value=S.ac}
- mapToolsSave();mapDrawPlan(m,Lf);mapRefreshSpecial(m,Lf);mapExploreAirport(S.dep,false);const pts=mapDispatchPoints()||[apLL(S.dep),apLL(S.arr)];m.fitBounds(pts,{padding:[35,35],maxZoom:8});
+ mapToolsSave();mapDrawPlan(m,Lf);mapRefreshSpecial(m,Lf);mapExploreAirport(S.dep,false);const pts=mapDispatchPoints()||[apLL(S.dep),apLL(S.arr)];if(!m.userNavigated&&!m.dispatchFramed){m.fitBounds(pts,{padding:[35,35],maxZoom:8});m.dispatchFramed=true}
  }catch(e){if(current())D.error=sbErrMsg(e)}finally{if(seq===D.sequence){D.busy=0;if(current())mapDispatchPaint();else if(owner===mapDispatchOwner())mapDispatchPaint()}}
 }
 document.addEventListener('click',e=>{if(e.target.closest('[data-action="map-dispatch-refresh"]')&&view==='map'&&MAPV.map)mapDispatchSync(MAPV.map,window.L,true)});

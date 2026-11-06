@@ -1,0 +1,61 @@
+.op-generating{grid-template-rows:auto auto minmax(0,1fr)}
+.op-generating .op-kpis{display:none}
+.op-generating .op-g{display:block;min-height:0}
+.op-generating .op-side{display:flex;height:100%;min-height:0}
+.op-generating .op-roster{flex:0 1 auto;min-width:0;max-height:100%;overflow:auto}
+.op-roster{display:flex;flex-direction:column;gap:7px}
+.op-roster .ops-roster-unavailable{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.op-roster:has(.ops-roster-unavailable:not([hidden])) .sd-note{display:none}
+.op-roster .ops-roster-tabs,.ops-roster-pages{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;flex:none}
+.op-roster .ops-roster-tabs [aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent)}
+.op-roster .rs-form-screen{padding:6px!important;margin:0!important;border:0;box-shadow:none;min-height:0}
+.op-roster .rs-grid{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(220px,280px)!important;gap:16px!important}
+.op-roster .rs-sidebar-main,.op-roster .rs-layout-left{min-width:0}
+.op-roster .rs-main-fields{display:block!important}
+.op-roster .rs-layout-right{display:none}
+.op-roster .rs-top-fields,.op-roster .rs-origin-compact{gap:8px!important}
+.op-roster .rs-layout-sidebar{padding:10px!important;display:flex!important;flex-direction:column;gap:10px!important}
+.op-roster .rs-layout-sidebar h3,.op-roster #rs-sidebar-summary{display:none}
+.op-roster .rs-settings,.op-roster .rs-actions{grid-column:1/-1}
+.op-roster .rs-actions{display:flex!important;gap:8px;justify-content:space-between;align-items:center;margin:0!important}
+.op-roster .rs-actions>div>small{display:none}
+.op-roster input,.op-roster select{min-height:32px}
+.op-roster .rs-modes{gap:5px}
+.op-roster .rs-mode-card{padding:6px 10px!important;min-height:32px!important}
+.op-roster .rs-form .rs-fld{margin-bottom:5px}
+.op-roster .rs-out{padding:8px;margin:0;border:0}
+.op-roster .rs-day header{flex-wrap:wrap;padding:5px!important}
+.op-roster .rs-day footer{padding:5px!important}
+.op-roster .rs-sum{gap:5px;flex-wrap:wrap;font-size:12px}
+.op-roster .bpc{margin:0!important}
+.op-roster .notice{font-size:12px;padding:6px}
+.op-roster .rs-accept{display:flex;flex-wrap:wrap;gap:6px}
+.op-roster .ops-roster-extras{grid-column:1/-1;min-width:0}
+.op-roster[data-stage=extras] .rs-grid{grid-template-columns:minmax(0,1fr)!important}
+.op-roster[data-stage=config] .ops-roster-extras,.op-roster[data-stage=config] .rs-out,
+.op-roster[data-stage=extras] .rs-mode-field,.op-roster[data-stage=extras] .rs-sidebar-main,
+.op-roster[data-stage=extras] .rs-layout-sidebar,.op-roster[data-stage=extras] .rs-out,
+.op-roster[data-stage=review] .rs-form-screen{display:none!important}
+.op-roster .rs-liv{display:block!important}
+/* The airport header is moved outside the form by scMoveDep. Keep one grid,
+   rather than nesting the generator inside the header's former main column. */
+.op-roster .rs-form-screen:has(>.rs-top-moved){display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,280px);gap:12px 16px;width:100%;max-width:none;box-sizing:border-box}
+.op-roster .rs-form-screen:has(>.rs-top-moved)>#f-rs{display:contents!important}
+.op-roster .rs-form-screen:has(>.rs-top-moved)>#f-rs>.rs-sidebar-main{grid-column:1;grid-row:3}
+.op-roster .rs-form-screen:has(>.rs-top-moved)>#f-rs>.rs-layout-sidebar{grid-column:2;grid-row:1/span 3;align-self:start}
+.op-roster .rs-top-moved{width:100%;min-width:0;grid-column:1;grid-row:1}
+.op-roster .rs-mode-field{grid-column:1;grid-row:2;margin:0!important}
+.op-roster .ops-roster-extras{grid-column:1/-1}
+.op-roster .rs-rpl-pair>.rs-ac,.op-roster .rs-rpl-pair .rs-pf-options,.op-roster .rs-rpl-pair .acp{min-width:0;width:100%}
+@media(max-width:1050px){.op-roster .rs-rpl-pair{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:800px){
+ .op-roster .rs-form-screen:has(>.rs-top-moved){display:block}
+ .op-roster .rs-form-screen:has(>.rs-top-moved)>#f-rs{display:grid!important}
+ .op-roster .rs-form-screen:has(>.rs-top-moved)>#f-rs>.rs-sidebar-main,
+ .op-roster .rs-form-screen:has(>.rs-top-moved)>#f-rs>.rs-layout-sidebar{grid-column:1;grid-row:auto}
+}
+@media(max-width:800px){.op-roster .rs-grid{grid-template-columns:minmax(0,1fr)!important}.op-generating .op-side{display:flex}.op-roster .rs-layout-sidebar{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+
+.op-top-tabs:has([data-op-tab="scale"]){grid-template-columns:repeat(6,minmax(0,1fr))}
+.op-top-tabs .btn{display:flex;align-items:center;justify-content:center;text-align:center}
+@media(max-width:800px){.op-top-tabs:has([data-op-tab="scale"]){grid-template-columns:repeat(3,minmax(0,1fr))}}

@@ -43,15 +43,16 @@
  const bars=id=>{let x="",s=0;for(const c of id+"VFR"){const v=c.charCodeAt(0);for(let i=0;i<4;i++){const on=(v>>i)&1;x+=`<i style="width:${on?2:1}px;margin-right:${((v>>(i+1))&1)+1}px"></i>`;s++}}return x};
  function logo(al,ink){const c=AIRLINE_IATA[al];return c?`<img class="cb-logo" src="${SYM_SRC[0](c)}" alt="${esc(al)}" data-c="${c}" data-i="0" style="filter:brightness(0)${ink==="#ffffff"?" invert(1)":""}" onerror="cbLogoErr(this)" onload="if(this.naturalWidth<8)cbLogoErr(this)">`:`<span class="cb-al">${esc(al||"Virtual Flight Report")}</span>`}
  window.cbLogoErr=img=>{const i=+img.dataset.i+1;if(SYM_SRC[i]){img.dataset.i=i;img.src=SYM_SRC[i](img.dataset.c)}else img.outerHTML=`<span class="cb-al">${esc(img.alt)}</span>`};
+ function portrait(pid,name){const avatar=typeof pilotAvatarFor==='function'&&pilotAvatarFor(pid);return avatar?`<img class="pa-badge" src="${pilotAvatarURL(avatar)}" alt="${esc(name)}">`:esc(initials(name))}
  function badge(pid,mini){const D=cbData(pid),P=cbPal(D.al),bg=`linear-gradient(160deg,${P.a},${P.b})`;
   if(mini)return`<div class="cb cb-mini" style="--cb-a:${P.a};--cb-b:${P.b};--cb-ink:${P.ink}" role="button" tabindex="0" data-action="cb-open" data-p="${esc(pid)}" title="${esc(ct("view"))}">
    <div class="cb-hd" style="background:${bg}"><span class="cb-slot"></span>${logo(D.al,P.ink)}<small>${esc(ct("crew"))}</small></div>
-   <div class="cb-ph" style="background:${bg}">${esc(initials(D.name))}</div>
+   <div class="cb-ph" style="background:${bg}">${portrait(pid,D.name)}</div>
    <div class="cb-nm"><span>${esc(t(D.r.k))}</span></div><div class="cb-rk">${insignia(D.r)}</div></div>`;
   const stat=(v,l,m)=>`<div><b class="${m?"mono":""}">${esc(String(v))}</b><span>${esc(l)}</span></div>`;
   return`<div class="cb cb-v2" style="--cb-a:${P.a};--cb-b:${P.b};--cb-ink:${P.ink}">
    <div class="cb-hd" style="background:${bg}"><span class="cb-slot"></span>${logo(D.al,P.ink)}${D.al?`<span class="cb-alname">${esc(D.al)}</span>`:""}<small>${esc(ct("crew"))}</small></div>
-   <div class="cb-ph" style="background:${bg}">${esc(initials(D.name))}</div>
+   <div class="cb-ph" style="background:${bg}">${portrait(pid,D.name)}</div>
    <div class="cb-nm"><b>${esc(D.name)}</b></div>
    <div class="cb-rank">${insignia(D.r)}<div class="cb-rank-tx"><b>${esc(t(D.r.k))}</b><div class="cb-prog" role="progressbar" aria-valuenow="${D.pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${D.pct}%"></i></div><small>${esc(D.prog)}</small></div></div>
    <div class="cb-stats">${stat(D.hours,ct("hours"),1)}${stat(D.n,ct("flights"))}${stat(D.aps,ct("aps"))}${stat(D.regs,ct("regs"))}</div>
@@ -90,7 +91,10 @@
   if(D.al&&drawn){x.font=font(800,15);sp("2px");x.fillText(D.al.toUpperCase(),W/2,122);sp("0px")}
   x.font=font(700,14);sp("4px");x.fillText(ct("crew"),W/2,148);sp("0px");
   x.beginPath();x.arc(W/2,250,90,0,7);x.fillStyle="#fff";x.fill();x.beginPath();x.arc(W/2,250,82,0,7);x.fillStyle=g;x.fill();
-  x.fillStyle=P.ink;x.font=font(800,54);x.textBaseline="middle";x.fillText(initials(D.name),W/2,252);x.textBaseline="alphabetic";
+  const avatar=typeof pilotAvatarFor==='function'&&pilotAvatarFor(pid),portraitImage=avatar?await img(pilotAvatarURL(avatar)):null;
+  if(portraitImage){x.save();x.beginPath();x.arc(W/2,250,82,0,Math.PI*2);x.clip();x.drawImage(portraitImage,W/2-82,168,164,164);x.restore()}
+  else{x.fillStyle=P.ink;x.font=font(800,54);x.textBaseline="middle";x.fillText(initials(D.name),W/2,252);x.textBaseline="alphabetic";}
+
   x.fillStyle="#171717";x.font=font(800,32);const words=D.name.split(" "),lines=[];let ln="";for(const w of words){const tr=ln?ln+" "+w:w;if(x.measureText(tr).width>W-70&&ln){lines.push(ln);ln=w}else ln=tr}lines.push(ln);
   let y=384;lines.slice(0,2).forEach(l=>{x.fillText(l,W/2,y);y+=38});y+=4;
   /* patente + progresso */

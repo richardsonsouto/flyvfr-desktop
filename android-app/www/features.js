@@ -309,11 +309,14 @@ async function initMap(){
     m.on("overlayadd",e=>sv(e,true));m.on("overlayremove",e=>sv(e,false));m.on("moveend",()=>mapTraffic());
     setTimeout(()=>mapTraffic(true),300)}
   else Lf.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,className:"vfr-tl-map",attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
+  const markers=Lf.layerGroup().addTo(m);
+  m.refreshFleetMarkers=()=>{
+    markers.clearLayers();
   const {groups,flying}=mapData(),css=getComputedStyle(document.documentElement),acc=css.getPropertyValue("--accent").trim()||"#0B6A93",bad=css.getPropertyValue("--bad").trim()||"#B42318",warn=css.getPropertyValue("--warn").trim()||"#8F5400";
   for(const [icao,list] of Object.entries(groups)){const ll=apLL(icao);if(!ll)continue;
     const nb=list.filter(a=>statusOf(a.id).key==="bad").length,nw=list.filter(a=>statusOf(a.id).key==="warn").length;
     const r=Math.min(24,5+Math.sqrt(list.length)*2.2);
-    const mk=Lf.circleMarker(ll,{radius:r,color:nb?bad:nw?warn:acc,weight:nb||nw?3:1.5,fillColor:acc,fillOpacity:.55}).addTo(m);
+    const mk=Lf.circleMarker(ll,{radius:r,color:nb?bad:nw?warn:acc,weight:nb||nw?3:1.5,fillColor:acc,fillOpacity:.55}).addTo(markers);
     
     const name=(AIRPORTS[icao]||[])[3]||"";
     mk.bindTooltip(`<b>${esc(icao)}</b> ${esc(name)}<br>${t(list.length===1?"map_ac_1":"map_ac_n",{n:list.length})}${nb?` · <span style="color:${bad}">${nb} AOG</span>`:""}${nw?` · ${nw} MEL`:""}`);
@@ -324,17 +327,23 @@ async function initMap(){
   const now=Date.now();
   for(const r of flying){const a=apLL(r.dep),b=apLL(r.arr);if(!a||!b)continue;const f=Math.min(1,Math.max(0,(now-r.start)/(r.end-r.start)));
     const pts=Array.from({length:41},(_,i)=>gcPoint(a,b,i/40)),p=gcPoint(a,b,f),q=gcPoint(a,b,Math.min(1,f+.01)),ac=acById(r.aircraftId);
-    Lf.polyline(pts,{color:acc,weight:2,dashArray:"5 6",opacity:.8}).addTo(m);
+    Lf.polyline(pts,{color:acc,weight:2,dashArray:"5 6",opacity:.8}).addTo(markers);
     const icon=Lf.divIcon({className:"map-plane",html:`<svg viewBox="0 0 24 24" width="26" height="26" style="transform:rotate(${bearing(p,q)}deg)"><path fill="${acc}" stroke="#fff" stroke-width=".8" d="M12 2c.8 0 1.3.7 1.3 1.6v5.6l7.7 4.6v2l-7.7-2.3v4.6l2 1.5V21l-3.3-1-3.3 1v-1.4l2-1.5v-4.6L3 15.8v-2l7.7-4.6V3.6C10.7 2.7 11.2 2 12 2z"/></svg>`,iconSize:[26,26],iconAnchor:[13,13]});
-    const mk=Lf.marker(p,{icon,title:ac.registration}).addTo(m);mk._vfr=r.id;
+    const mk=Lf.marker(p,{icon,title:ac.registration}).addTo(markers);mk._vfr=r.id;
     mk.bindTooltip(`<b>${esc(ac.registration)}</b> ${esc(icaoType(ac.type)||ac.type)}<br>${esc(r.dep)} → ${esc(r.arr)}${r.flightNo?" · "+esc(r.flightNo):""}<br>${esc(pilot(r.pilotId))} · ${t("map_eta",{t:fmtT(r.end)})}`);
     if(typeof flightInfoBind==='function')flightInfoBind(mk,{source:'FlyVFR',callsign:r.flightNo,registration:ac.registration,type:ac.type,pilot:pilot(r.pilotId),dep:r.dep,arr:r.arr,aircraftId:r.aircraftId,lat:p[0],lon:p[1],estimated:true});
   }
+    return {groups,flying};
+  };
+  const {groups,flying}=m.refreshFleetMarkers();
+  const navigated=()=>{m.userNavigated=true};
+  for(const event of ['pointerdown','wheel','keydown']) el.addEventListener(event,navigated,{passive:true,capture:true});
   if(!MAPV.center){const pts=[...Object.keys(groups).map(apLL),...flying.flatMap(r=>[apLL(r.dep),apLL(r.arr)])].filter(Boolean);if(pts.length>1)m.fitBounds(pts,{padding:[30,30],maxZoom:6});else if(pts.length)m.setView(pts[0],5)}
   if(typeof drawLive==="function"){liveLayer=null;liveTrail=null;liveSel=null;drawLive(m);liveDrawn=[...liveAcIds()].sort().join()}
   m.on("popupopen",ev=>{const c=ev.popup.getElement();c&&c.addEventListener("click",x=>{const b=x.target.closest("[data-ac]");if(b){m.closePopup();paintAircraftSheet(b.dataset.ac)}})});
   if(typeof mapToolsInit==="function")await mapToolsInit(m,Lf);
   if(typeof mapRadarInit==="function"&&el.isConnected&&MAPV.map===m)mapRadarInit(m,Lf);
+  if(typeof mapRadar3DInit==="function"&&el.isConnected&&MAPV.map===m)mapRadar3DInit(m,Lf);
   if(typeof mapChartsInit==="function"&&el.isConnected&&MAPV.map===m)await mapChartsInit(m,Lf);
   if(typeof netMapInit==='function'&&el.isConnected&&MAPV.map===m&&MAPV.control)netMapInit(m,Lf,MAPV.control);
   setTimeout(()=>m.invalidateSize(),60);

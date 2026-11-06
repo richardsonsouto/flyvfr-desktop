@@ -89,6 +89,7 @@ const faRplFav=()=>{const fav=myFavAirline();if(!fav||FA.rplAll||typeof FL!=="un
 function faRplBar(fav,on,total){if(!myFavAirline()||typeof FL!=="undefined"&&FL.mode==="freelancer")return"";const al=esc(myFavAirline());
   return`<div class="fa-rpl-bar">${faSym(myFavAirline())}<span>${on?fat("fa_rpl_only",{al}):fat("fa_rpl_allon")}</span><button type="button" class="btn small" data-action="fa-rpl-all">${on?fat("fa_rpl_all"):fat("fa_rpl_back",{al})}</button></div>`}
 if(typeof rsPfHTML==="function"){const faPf=rsPfHTML;rsPfHTML=function(list){const fav=faRplFav();
+  if(typeof opsRosterAirline==="function"&&opsRosterAirline())return faPf.call(this,list);
   if(!fav)return(FA.rplAll&&myFavAirline()?faRplBar("",false):"")+faPf.call(this,list);
   const mine=list.filter(x=>x.al===fav);
   if(!mine.length)return faRplBar(fav,true)+`<div class="fa-rpl-none"><p>${fat("fa_rpl_none",{al:esc(fav),n:list.length})}</p></div>`;
@@ -149,14 +150,9 @@ function faWatchChoice(){if(typeof RS==="undefined")return;try{
   const ro=RS.roster?String(RS.roster.acId)+"|"+(RS.roster.legs&&RS.roster.legs[0]&&RS.roster.legs[0].std):"";if(ro&&ro!==FA.seen.roster){FA.seen.roster=ro;faSetFly(faAcAl(RS.roster.acId))}else if(!ro)FA.seen.roster=""}catch(e){}}
 document.addEventListener("click",e=>{const el=e.target.closest&&e.target.closest('[data-action="rs-accept"]');if(el&&RS.roster)faSetFly(faAcAl(RS.roster.acId))},true);
 document.addEventListener("change",e=>{if(e.target&&e.target.id==="bk-ac"){const al=faAcAl(e.target.value);if(al)faSetFly(al)}});
-function faThemeAirline(){const base=myFavAirline();if(!base)return base;const ok=x=>x&&typeof LIVERY!=="undefined"&&LIVERY[x];
-  const fly=faGetFly();if(ok(fly))return fly;
-  try{const now=Date.now(),r=data.reservations.filter(x=>x.pilotId===myId&&booked(x)&&x.end>now).sort((x,y)=>x.start-y.start)[0];const a=r&&acById(r.aircraftId);if(a&&ok(a.airline))return a.airline}catch(e){}
-  if(typeof RS!=="undefined"){let sel="";
-    try{if(RS.roster)sel=faAcAl(RS.roster.acId);if(!ok(sel)&&RS.ac)sel=faAcAl(RS.ac);if(!ok(sel)&&!RS.other&&RS.pf)sel=RS.pf.al;if(!ok(sel)&&typeof ACP!=="undefined"&&ACP.rs&&ACP.rs.al!=="all")sel=ACP.rs.al}catch(e){}
-    if(ok(sel))return sel}
-  return base}
-function faTheme(){const r=document.documentElement,fav=faThemeAirline(),on=!!(session&&myFavColors()&&myFavAirline()&&fav&&!(typeof FL!=="undefined"&&FL.mode==="freelancer")),dark=typeof isDark==="function"?isDark():false;
+// Menu colors follow the Profile preference, independently of flights and aircraft.
+function faThemeAirline(){return myFavAirline()}
+function faTheme(){const r=document.documentElement,fav=faThemeAirline(),on=!!(session&&myFavColors()&&myFavAirline()&&fav),dark=typeof isDark==="function"?isDark():false;
   const key=on?fav+"|"+dark:"";if(key===FA.themeKey)return;FA.themeKey=key;
   const P=on?faPalette(fav,dark):null;if(!P){FA_VARS.forEach(v=>r.style.removeProperty(v));r.removeAttribute("data-fav-colors");return}
   for(const v of FA_VARS)r.style.setProperty(v,P[v]);r.setAttribute("data-fav-colors",fav)}

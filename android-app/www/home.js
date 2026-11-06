@@ -33,6 +33,8 @@
   nowLeg:["next","próximo","próximo","suivant","nächster","次","下一个","다음"],
   none:["No flight booked","Nenhum voo marcado","Ningún vuelo reservado","Aucun vol réservé","Kein Flug gebucht","予約されたフライトはありません","没有已预订的航班","예약된 비행 없음"],
   noneP:["Build an RPL roster with real airline flights, or pick any aircraft for a free roster.","Monte uma escala RPL com voos reais da companhia, ou escolha qualquer aeronave numa escala livre.","Arma una programación RPL con vuelos reales, o elige cualquier aeronave en una programación libre.","Créez une rotation RPL avec de vrais vols, ou choisissez un avion pour une rotation libre.","Erstellen Sie einen RPL-Umlauf mit echten Flügen oder wählen Sie ein Flugzeug für einen freien Umlauf.","実在便で RPL スケジュールを作るか、自由スケジュールで機体を選びましょう。","用真实航班生成 RPL 排班，或在自由排班中选择任意飞机。","실제 항공편으로 RPL 스케줄을 만들거나 자유 스케줄에서 기체를 고르세요."],
+  noneFree:["Choose an aircraft from the freelancer fleet and build your free roster.","Escolha uma aeronave da frota freelancer e monte sua escala livre.","Elige una aeronave de la flota freelancer y crea tu programación libre.","Choisissez un avion de la flotte freelance et créez votre rotation libre.","Wählen Sie ein Flugzeug der Freelancer-Flotte und erstellen Sie Ihren freien Umlauf.","フリーランス機材から機体を選び、自由スケジュールを作成しましょう。","选择自由飞行员机队中的飞机，创建自由排班。","프리랜서 기단에서 항공기를 선택해 자유 스케줄을 만드세요."],
+  mkFree:["Build free roster","Montar escala livre","Crear programación libre","Créer une rotation libre","Freien Umlauf erstellen","自由スケジュール作成","创建自由排班","자유 스케줄 만들기"],
   mkRpl:["Build RPL roster","Montar escala RPL","Armar programación RPL","Créer une rotation RPL","RPL-Umlauf erstellen","RPL スケジュール作成","生成 RPL 排班","RPL 스케줄 만들기"],
   fleet:["See the fleet","Ver a frota","Ver la flota","Voir la flotte","Flotte ansehen","機材を見る","查看机队","기단 보기"],
   prog:["Your progress","Seu progresso","Tu progreso","Votre progression","Ihr Fortschritt","あなたの進捗","您的进度","내 진행 상황"],
@@ -82,9 +84,9 @@
   if(!d){if(!WXP.has(c)&&typeof fetchWx==="function"&&navigator.onLine){WXP.add(c);fetchWx(c).then(()=>{if(view==="home")render()}).catch(()=>{})}return""}
   const cat=d.fltCat||"",cls={VFR:"ok",MVFR:"neutral",IFR:"warn",LIFR:"bad"}[cat]||"neutral",w=typeof dvWind==="function"?dvWind(d.metar):null;
   if(!cat&&!w)return"";return`<span class="hm-chip ${cls}">${esc(c)}${cat?" "+esc(cat):""}${w?` · ${w.dir==null?"VRB":String(w.dir).padStart(3,"0")}/${String(w.spd).padStart(2,"0")}kt`:""}</span>`}
- function nextCard(){const up=upcoming(),r=up[0];
-  if(!r)return`<section class="hm-card hm-next hm-empty"><div class="hm-ein"><span class="hm-big" aria-hidden="true">✈</span><h3>${esc(ht("none"))}</h3><p class="muted">${esc(ht("noneP"))}</p>
-   <div class="hm-acts"><button type="button" class="btn primary" data-view="roster">${esc(ht("mkRpl"))}</button><button type="button" class="btn" data-view="fleet">${esc(ht("fleet"))}</button></div></div></section>`;
+ function nextCard(){const up=upcoming(),r=up[0],free=typeof flIsFree==="function"&&flIsFree();
+  if(!r)return`<section class="hm-card hm-next hm-empty"><div class="hm-ein"><span class="hm-big" aria-hidden="true">✈</span><h3>${esc(ht("none"))}</h3><p class="muted">${esc(ht(free?"noneFree":"noneP"))}</p>
+   <div class="hm-acts"><button type="button" class="btn primary" data-view="roster">${esc(ht(free?"mkFree":"mkRpl"))}</button><button type="button" class="btn" data-view="fleet">${esc(ht("fleet"))}</button></div></div></section>`;
   const a=acById(r.aircraftId)||{registration:r.aircraftId,type:"",airline:""},al=a.airline||"",P=pal(al),now=Date.now(),eobt=eobtOf(r),eta=etaOf(r);
   const same=r.rosterId?up.filter(x=>x.rosterId===r.rosterId):[r],nLegs=r.rosterId?data.reservations.filter(x=>x.rosterId===r.rosterId&&x.pilotId===myId).length:0,legsTxt=r.rosterId?(nLegs===1?ht("legs1"):ht("legs",{n:nLegs})):ht("single");
   const late=eobt<now,cd=late?"−"+hm(now-eobt):(eobt-now>=48*36e5?Math.floor((eobt-now)/864e5)+" d":hm(eobt-now));
@@ -159,7 +161,7 @@
  if(typeof rsHomeInit==="function"){const ri=rsHomeInit;rsHomeInit=function(){const r=ri.apply(this,arguments);try{view="home"}catch(e){}return r}}
  /* barra de baixo no celular */
  const BB=["home","roster","briefing","logbook","map"];
- function paintBar(){let bar=document.getElementById("hm-bar");const on=!!(session&&!recovering&&!document.body.classList.contains("is-landing"));
+ function paintBar(){let bar=document.getElementById("hm-bar");const on=!!(session&&!recovering&&!document.body.classList.contains("is-landing")&&document.documentElement.dataset.layout!=="bottom");
   if(!on){if(bar)bar.remove();document.body.classList.remove("hm-has-bar");return}
   if(!bar){bar=document.createElement("nav");bar.id="hm-bar";bar.className="hm-tabbar";bar.setAttribute("aria-label","Menu");document.body.appendChild(bar)}
   document.body.classList.add("hm-has-bar");

@@ -9,7 +9,7 @@
  function unfit(v){v.classList.remove("ef");v.querySelectorAll(".ef-days").forEach(x=>x.remove());v.querySelectorAll(".ef-row,.ef-acc,.ef-foot").forEach(w=>{while(w.firstChild)w.before(w.firstChild);w.remove()});v.querySelectorAll(".ef-liv-t").forEach(x=>x.remove());const lw=v.querySelector("#rs-liveries"),rr=v.querySelector(".rs-layout-right");if(lw&&rr&&lw.parentElement!==rr)rr.appendChild(lw);
   const liv=v.querySelector("#rs-liveries .rs-liv");if(liv){liv.classList.remove("ef-open");liv.removeAttribute("style")}EF.liv=false;document.getElementById("ef-liv-pop")?.remove();
   const out=v.querySelector(".rs-out");if(out){out.querySelectorAll(":scope>section.rs-day").forEach(d=>d.hidden=false);const l=out.querySelector(".rs-legs.ef-scroll");if(l){l.style.maxHeight="";l.classList.remove("ef-scroll")}}}
- function fit(){const v=document.getElementById("view");if(!v)return;const on=typeof view!=="undefined"&&view==="roster";
+ function fit(){const v=document.getElementById("view");if(!v)return;const on=typeof view!=="undefined"&&view==="roster"&&!v.querySelector(".op-roster");
   if(!on||innerWidth<761){document.getElementById("ef-liv-pop")?.remove();if(v.classList.contains("ef"))unfit(v);return}v.classList.add("ef");
   /* pinturas: o título vira um botão que abre/fecha a lista */
   const lw=v.querySelector("#rs-liveries"),ph=v.querySelector(".rs-acphoto");if(lw&&ph&&lw.parentElement!==ph)ph.appendChild(lw);

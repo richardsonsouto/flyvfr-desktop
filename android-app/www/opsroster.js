@@ -1,0 +1,71 @@
+// Render the existing roster form inside Operations without duplicating its state.
+const OPS_ROSTER_UI={stage:'config',roster:null,leg:0};
+function opsRosterText(key){
+ const labels={
+  config:['Configure','Configurar','Configurar','Configurer','Einrichten','設定','配置','설정'],
+  extras:['Extras','Complementos','Complementos','Compléments','Zusatzinfos','追加情報','补充信息','추가 정보'],
+  review:['Review','Revisar','Revisar','Vérifier','Prüfen','確認','检查','검토']
+ };
+ return labels[key][LANGS.indexOf(lang)]||labels[key][0];
+}
+function opsRosterPaint(){
+ const pane=document.querySelector('.op-roster');
+ if(!pane||view!=='roster')return;
+ const state=OPS_ROSTER_UI;
+ if(state.roster!==RS.roster){state.stage=RS.roster?'review':'config';state.leg=0;state.roster=RS.roster}
+ pane.querySelector('.rs-screen-head')?.remove();
+ let tabs=pane.querySelector('.ops-roster-tabs');
+ if(!tabs){tabs=document.createElement('nav');tabs.className='ops-roster-tabs';pane.prepend(tabs)}
+ const html=['config','extras','review'].map(key=>`<button type="button" class="btn small" data-ops-stage="${key}" aria-pressed="${state.stage===key}">${esc(opsRosterText(key))}</button>`).join('');
+ if(tabs.innerHTML!==html)tabs.innerHTML=html;
+ pane.dataset.stage=state.stage;
+ let unavailable=pane.querySelector('.ops-roster-unavailable');
+ if(!unavailable){unavailable=document.createElement('div');unavailable.className='notice ops-roster-unavailable';tabs.after(unavailable)}
+ unavailable.hidden=!RS.opsNoRpl||!!RS.roster||state.stage!=='config';
+ if(!unavailable.hidden){
+  const al=typeof opsRosterAirline==='function'?opsRosterAirline():'';
+  const messages=[
+   `No eligible RPL flights for ${al} from ${RS.dep} in the next 30–90 minutes.`,
+   `Nenhum voo RPL elegível da ${al} partindo de ${RS.dep} nos próximos 30–90 minutos.`,
+   `No hay vuelos RPL elegibles de ${al} desde ${RS.dep} en los próximos 30–90 minutos.`,
+   `Aucun vol RPL admissible de ${al} au départ de ${RS.dep} dans les 30 à 90 prochaines minutes.`,
+   `Keine geeigneten RPL-Flüge von ${al} ab ${RS.dep} in den nächsten 30–90 Minuten.`,
+   `${RS.dep}発の${al}の適合するRPL便は今後30～90分にありません。`,
+   `未来30–90分钟内没有${al}从${RS.dep}出发的符合条件的RPL航班。`,
+   `향후 30~90분 내 ${RS.dep} 출발 ${al}의 적격 RPL 항공편이 없습니다.`];
+  const change=['Your favorite airline can be changed in Profile.','A companhia favorita pode ser alterada no Perfil.','Puedes cambiar tu compañía favorita en Perfil.','La compagnie favorite peut être modifiée dans le Profil.','Die bevorzugte Fluggesellschaft kann im Profil geändert werden.','お気に入りの航空会社はプロフィールで変更できます。','可在个人资料中更改偏好的航空公司。','프로필에서 선호 항공사를 변경할 수 있습니다.'][LANGS.indexOf(lang)]||'Change your favorite airline in Profile.';
+  unavailable.innerHTML=`<span>${esc(messages[LANGS.indexOf(lang)]||messages[0])}</span> <small>${esc(change)}</small>`;
+ }
+ const form=pane.querySelector('#f-rs');
+ if(form){
+   let extra=pane.querySelector('.ops-roster-extras');
+   if(!extra){extra=document.createElement('div');extra.className='ops-roster-extras';form.append(extra)}
+   for(const selector of ['#rs-liveries','#rs-ground','.rs-rules']){
+     const node=pane.querySelector(selector);if(node&&node.parentNode!==extra)extra.append(node);
+   }
+   for(const details of extra.querySelectorAll('details'))details.open=true;
+ }
+ const output=pane.querySelector('.rs-out'),cards=output?[...output.querySelectorAll('.bpc')]:[];
+ state.leg=Math.max(0,Math.min(state.leg,cards.length-1));
+ for(const [index,card] of cards.entries())card.hidden=index!==state.leg;
+ for(const day of pane.querySelectorAll('.rs-day')){
+   day.hidden=!day.querySelector('.bpc:not([hidden])');
+   for(const node of day.querySelectorAll('.rs-turn'))node.hidden=true;
+ }
+ let pages=pane.querySelector('.ops-roster-pages');
+ if(!pages){pages=document.createElement('div');pages.className='ops-roster-pages';pane.append(pages)}
+ pages.hidden=state.stage!=='review'||!cards.length;
+ pages.innerHTML=cards.length?`<button class="btn small" type="button" data-ops-leg="-1" ${!state.leg?'disabled':''}>‹</button><span>${state.leg+1} / ${cards.length}</span><button class="btn small" type="button" data-ops-leg="1" ${state.leg+1===cards.length?'disabled':''}>›</button>`:'';
+ let empty=pane.querySelector('.ops-roster-empty');
+ if(!empty){empty=document.createElement('p');empty.className='ops-roster-empty';pane.append(empty)}
+ empty.hidden=state.stage!=='review'||!!RS.roster;
+ empty.textContent=t('rs_gen');
+}
+document.addEventListener('click',event=>{
+ if(event.target.closest('[data-action="rs-other"][data-v="1"]'))RS.opsNoRpl=false;
+ const button=event.target.closest('[data-ops-stage],[data-ops-leg]');
+ if(!button||view!=='roster')return;
+ if(button.dataset.opsStage)OPS_ROSTER_UI.stage=button.dataset.opsStage;
+ else OPS_ROSTER_UI.leg+=Number(button.dataset.opsLeg);
+ opsRosterPaint();
+});

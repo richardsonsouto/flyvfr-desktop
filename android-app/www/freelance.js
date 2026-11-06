@@ -99,6 +99,15 @@ function flSheetMode(){const other=flIsFree()?"airline":"freelancer",adm=typeof 
    ${wait?`<div class="notice">${ft("fl_err_recent",{d:dateF(next)})}</div>`:""}
    <p class="form-err" id="fl-sheet-err" ${FL.err?"":"hidden"}>${esc(FL.err)}</p>
    <div class="row"><button class="btn primary" data-action="fl-set-mode" data-v="${other}" ${wait||FL.busy?"disabled":""}>${ft("fl_change_to",{m:flModeName(other)})}</button><button class="btn" type="button" data-action="close">${t("cancel")}</button></div>`)}
+
+/* Profile exposes the existing mode switch and its server-enforced rules. */
+function flProfileModeHTML(){return `<fieldset class="fl-field fl-profile-mode"><legend>${esc(ft('fl_profile'))}</legend>
+ <div class="fl-profile-options">${['airline','freelancer'].map(mode=>`<button type="button" class="btn${FL.mode===mode?' primary':''}" data-action="fl-mode" aria-pressed="${FL.mode===mode}" ${FL.mode===mode||FL.busy?'disabled':''}><span aria-hidden="true">${mode==='airline'?'✈':'🛩'}</span> ${esc(flModeName(mode))}</button>`).join('')}</div>
+ <p class="hint">${esc(ft(typeof IS_ADMIN==='function'&&IS_ADMIN()?'fl_admin_rule':'fl_change_rule'))}</p></fieldset>`}
+if(typeof sheetMySims==='function'){const flProfileSheet=sheetMySims;sheetMySims=function(){
+ flProfileSheet.apply(this,arguments);const form=document.getElementById('f-sims');
+ if(form&&FL.supported){const field=document.createElement('div');field.innerHTML=flProfileModeHTML();form.prepend(field.firstElementChild)}
+}}
 document.addEventListener("click",async e=>{const el=e.target.closest('[data-action^="fl-"]');if(!el)return;const a=el.dataset.action;
   if(a==="fl-mode"){FL.err="";flSheetMode()}
   if(a==="fl-set-mode"){const ok=await flSetMode(el.dataset.v);if(!ok)flSheetMode()}
