@@ -41,6 +41,9 @@
   flightsN:["{n} flights","{n} voos","{n} vuelos","{n} vols","{n} Flüge","{n} 便","{n} 个航班","{n}편"],
   airList:["In the air now","No ar agora","En el aire ahora","En vol maintenant","Jetzt in der Luft","現在飛行中","正在飞行","지금 비행 중"],
   airNone:["Nobody flying for this airline right now.","Ninguém voando por esta companhia agora.","Nadie vuela por esta aerolínea ahora.","Personne ne vole pour cette compagnie.","Gerade fliegt niemand für diese Airline.","この航空会社で飛行中の便はありません。","该航空公司目前没有航班在飞。","이 항공사로 비행 중인 사람이 없습니다."],
+  rplMap:["Routes of the next departures","Rotas das próximas partidas","Rutas de las próximas salidas","Routes des prochains départs","Strecken der nächsten Abflüge","次の出発のルート","即将出发的航线","다음 출발 노선"],
+  rplRoutes:["{n} routes","{n} rotas","{n} rutas","{n} routes","{n} Strecken","{n} ルート","{n} 条航线","{n}개 노선"],
+  rplNoMap:["No departures in the window right now.","Nenhuma partida na janela agora.","Ninguna salida en la ventana ahora.","Aucun départ dans la fenêtre pour l’instant.","Derzeit keine Abflüge im Zeitfenster.","現在、対象時間帯の出発はありません。","当前时间窗口内没有出发航班。","현재 시간대에 출발편이 없습니다."],
   rpl:["Next RPL departures","Próximas partidas RPL","Próximas salidas RPL","Prochains départs RPL","Nächste RPL-Abflüge","次の RPL 出発","即将出发的 RPL","다음 RPL 출발"],
   rplNone:["No RPL departures for this airline in the next 30–90 minutes.","Nenhuma partida RPL desta companhia na janela de 30–90 minutos.","Sin salidas RPL de esta aerolínea entre 30 y 90 minutos desde ahora.","Aucun départ RPL de cette compagnie dans la fenêtre de 30 à 90 minutes.","Keine RPL-Abflüge dieser Airline im Zeitfenster von 30 bis 90 Minuten.","この航空会社には30～90分後に出発するRPL便がありません。","该航司在未来30至90分钟内无RPL航班起飞。","이 항공사는 지금부터 30~90분 사이에 출발하는 RPL 항공편이 없습니다."],
   free:["open","livre","libre","libre","frei","空き","空闲","가능"],
@@ -194,6 +197,8 @@
      <button type="button" class="linkish" data-view="map">${esc(ot("map"))} ›</button></div>
     <div class="op-mw"><div class="op-mapbox"><div id="op-map" class="op-map"><div class="map-loading">${esc(t("map_loading"))}</div></div><div class="op-cnt" id="op-cnt"></div><div class="op-clock" id="op-clock"></div></div>
     </div><p class="hint op-note">${esc(ot("netNote"))}</p></section>
+    <section class="op-c op-map-panel op-rmap-panel" hidden><div class="op-hd"><h3>${esc(ot("rplMap"))}</h3><span class="muted" id="op-rmap-n"></span></div>
+    <div class="op-mw"><div class="op-mapbox"><div id="op-rmap" class="op-map"></div></div></div></section>
     <div class="op-side"><section class="op-c op-roster" data-op-pane="scale">${view==="roster"?rosterView():""}</section><section class="op-c" data-op-pane="air"><div class="op-hd"><h3>${esc(ot("airList"))}</h3></div><div id="op-air"></div></section>
      <section class="op-c" data-op-pane="rpl"><div class="op-hd"><h3>${esc(ot("rpl"))}</h3><button type="button" class="linkish" data-view="roster">${esc(ot("build"))} ›</button></div><div id="op-rpl"></div></section>
    <section class="op-c" data-op-pane="rank"><div class="op-hd"><h3>${esc(ot("rank"))}</h3><button type="button" class="linkish" data-view="logbook">${esc(t("nav_logbook"))} ›</button></div>
@@ -236,7 +241,9 @@
    root.classList.toggle("op-generating",selected==="scale");
    const mapPanel=root.querySelector(".op-map-panel");
    /* o mapa só aparece em "No ar agora"; nas outras abas o conteúdo ocupa a largura toda */
-   mapPanel.hidden=selected!=="air";root.classList.toggle("op-nomap",selected!=="air"&&selected!=="scale");root.classList.toggle("op-air",selected==="air");
+   mapPanel.hidden=selected!=="air";const rPanel=root.querySelector(".op-rmap-panel");if(rPanel)rPanel.hidden=selected!=="rpl";
+   root.classList.toggle("op-nomap",!["air","rpl","scale"].includes(selected));root.classList.toggle("op-air",selected==="air"||selected==="rpl");
+   if(selected==="rpl")setTimeout(rplMap,0);
    for(const button of root.querySelectorAll("[data-op-tab]")){
      button.setAttribute("aria-pressed",String(button.dataset.opTab===selected));
    }
@@ -272,6 +279,29 @@
    }
    fitOps();if(!mapPanel.hidden)O.map?.invalidateSize({pan:false});
  }
+ /* mapa fixo das próximas partidas RPL: só as rotas, com setas animadas da origem para o destino */
+ const RM={map:null,el:null};
+ async function rplMap(){const el=document.getElementById("op-rmap");if(!el)return;
+  if(RM.map&&RM.el===el){RM.map.invalidateSize({pan:false});return}
+  if(RM.map){try{RM.map.remove()}catch(e){}RM.map=null}
+  try{await Promise.all([loadLeaflet(),loadAirports(),typeof loadSchedule==="function"?loadSchedule():null])}catch(e){return}
+  if(!el.isConnected||el.offsetParent===null)return;const Lf=window.L;el.innerHTML="";
+  const m=Lf.map(el,{zoomControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false,tap:false,attributionControl:true,zoomSnap:.25});RM.map=m;RM.el=el;
+  const base=typeof brfBaseLayers==="function"?brfBaseLayers(Lf):null;let bk=null;try{bk=localStorage.getItem("vfr-map-base")}catch(e){}if(base)(base[bk]||Object.values(base)[0]).addTo(m);
+  const deps=rplLegs(alNow(),...rsRplWindow()).slice(0,5),seen=new Map(); /* as mesmas partidas da lista ao lado */
+  for(const d of deps){const k=d.dep+">"+d.arr;if(!seen.has(k))seen.set(k,{dep:d.dep,arr:d.arr,f:[]});const r=seen.get(k);if(r.f.length<4)r.f.push(`${d.reg} · ${utc(d.t0)}`)}
+  const routes=[...seen.values()].filter(r=>ll(r.dep)&&ll(r.arr)).slice(0,40),nb=document.getElementById("op-rmap-n");if(nb)nb.textContent=routes.length?ot("rplRoutes",{n:routes.length}):"";
+  if(!routes.length){m.setView([-15,-50],3);const box=document.createElement("div");box.className="op-rmap-empty";box.textContent=ot("rplNoMap");el.appendChild(box);return}
+  const pts=[];routes.forEach(r=>{pts.push(ll(r.dep),ll(r.arr))});m.fitBounds(pts,{padding:[34,34],maxZoom:7});
+  const lay=Lf.layerGroup().addTo(m),aps=new Map();
+  for(const r of routes){const a=ll(r.dep),b=ll(r.arr),dx=b[1]-a[1],dy=b[0]-a[0],len=Math.hypot(dx,dy)||1,k=Math.min(.22,1.2/len+.08);
+   const c=[(a[0]+b[0])/2+dx*k,(a[1]+b[1])/2-dy*k],arc=[];for(let i=0;i<=24;i++){const t=i/24,u=1-t;arc.push([u*u*a[0]+2*u*t*c[0]+t*t*b[0],u*u*a[1]+2*u*t*c[1]+t*t*b[1]])}
+   Lf.polyline(arc,{className:"op-rt-base",weight:3,opacity:.35,interactive:false}).addTo(lay);
+   Lf.polyline(arc,{className:"op-rt",weight:2.4,opacity:1}).bindTooltip(`<b>${esc(r.dep)} → ${esc(r.arr)}</b><br>${r.f.map(esc).join("<br>")}`,{sticky:true}).addTo(lay);
+   const p1=m.latLngToLayerPoint(arc[21]),p2=m.latLngToLayerPoint(arc[24]),ang=Math.atan2(p2.y-p1.y,p2.x-p1.x)*180/Math.PI;
+   Lf.marker(arc[24],{interactive:false,icon:Lf.divIcon({className:"op-rt-arrow",html:`<i style="transform:rotate(${ang.toFixed(0)}deg)"></i>`,iconSize:[16,16],iconAnchor:[8,8]})}).addTo(lay);
+   aps.set(r.dep,(aps.get(r.dep)||0)|1);aps.set(r.arr,(aps.get(r.arr)||0)|2)}
+  for(const [c,kind] of aps){Lf.circleMarker(ll(c),{radius:kind&1?5:3.5,weight:1.5,color:"#fff",fillColor:kind&1?"#F5B800":"#0B6A93",fillOpacity:1,interactive:false}).bindTooltip(esc(c),{permanent:true,direction:"right",className:"op-tt op-rt-lbl",offset:[6,0]}).addTo(lay)}}
  document.addEventListener("click",e=>{
    const button=e.target.closest("[data-op-tab],[data-op-page]");if(!button)return;
    if(button.dataset.opTab==="scale"&&view!=="roster"){if(rosterMenuLocked())return showRosterLocked();view="roster";render();return}
@@ -294,7 +324,14 @@
  if(typeof render==="function"){const rr=render;render=function(){const r=rr.apply(this,arguments);try{if((view==="ops"||view==="roster")&&session){paintPanes();if(view==="roster"){if(O.map){O.center=O.map.getCenter();O.zoom=O.map.getZoom();O.map.remove();O.map=null}opsRosterPaint()}else initMap()}else if(O.map){try{O.center=O.map.getCenter();O.zoom=O.map.getZoom();O.map.remove()}catch(e){}O.map=null;O.lay=null;O.play=false}}catch(e){console.warn(e)}return r}}
  setInterval(()=>{if((view==="ops"||view==="roster")&&!document.hidden){netFetch();if(O.mode==="now")draw()}},30e3);
  const css=`.op{display:grid;gap:14px}
-.op-map-panel[hidden]{display:none!important}.op-nomap .op-g{display:block}.op-nomap .op-side{width:100%}
+.op-map-panel[hidden]{display:none!important}
+.op-rt{stroke:#F5B800;stroke-dasharray:7 9;animation:opRt 1.1s linear infinite;cursor:default}.op-rt-base{stroke:#0B6A93}
+@keyframes opRt{to{stroke-dashoffset:-16}}
+@media (prefers-reduced-motion:reduce){.op-rt{animation:none}}
+.op-rt-arrow{background:none;border:0}.op-rt-arrow i{display:block;width:0;height:0;margin:1px 0 0 2px;border-left:13px solid #F5B800;border-top:7px solid transparent;border-bottom:7px solid transparent;filter:drop-shadow(0 0 1px #13202E);transform-origin:40% 50%}
+.op-rt-lbl{font:600 10.5px var(--f-mono)!important;padding:1px 5px!important}
+.op-rmap-empty{position:absolute;inset:auto 12px 12px 12px;z-index:500;background:rgba(19,32,46,.85);color:#fff;border-radius:8px;padding:8px 12px;font-size:.84rem;text-align:center}
+.op-nomap .op-g{display:block}.op-nomap .op-side{width:100%}
 @media(max-width:800px){.op.op-air{height:auto!important}.op.op-air .op-g{grid-template-rows:auto auto}.op.op-air .op-mapbox,.op.op-air .op-map{height:280px!important;min-height:280px}.op.op-air [data-op-pane="air"]{max-height:none;overflow:visible}}
 .op-hero{border-radius:14px;padding:16px 20px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
 .op-lg{width:76px;height:76px;border-radius:12px;background:#fff;display:grid;place-items:center;font:700 1.1rem var(--f-mono);color:#13202E;overflow:hidden}.op-lg img,.op-lg svg{display:block;width:62px;height:62px;max-width:62px;max-height:62px;object-fit:contain;margin:0}
