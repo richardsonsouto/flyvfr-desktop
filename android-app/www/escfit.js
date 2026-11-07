@@ -9,7 +9,16 @@
  const T={
    liv:["Liveries ({n})","Pinturas ({n})","Libreas ({n})","Livrées ({n})","Lackierungen ({n})","塗装 ({n})","涂装 ({n})","도색 ({n})"],
    rpl_h:["{n} departures in the next 6 h","{n} saídas nas próximas 6 h","{n} salidas en las próximas 6 h","{n} départs dans les 6 h","{n} Abflüge in 6 Std.","{n} 便 (6時間以内)","{n} 班 (6小时内)","{n}편 (6시간)"],
-   no_rpl:["No RPL departures","Sem saídas RPL","Sin salidas RPL","Aucun départ RPL","Keine RPL-Abflüge","RPL出発なし","无RPL出发","RPL출발 없음"]
+   no_rpl:["No RPL departures","Sem saídas RPL","Sin salidas RPL","Aucun départ RPL","Keine RPL-Abflüge","RPL出発なし","无RPL出发","RPL출발 없음"],
+   pv:["Roster preview","Prévia da escala","Vista previa","Aperçu du planning","Vorschau der Flugfolge","スケジュール プレビュー","排班预览","스케줄 미리보기"],
+   pv_total:["Est. total","Total estimado","Total estimado","Total estimé","Geschätzt gesamt","推定合計","预计总数","예상 합계"],
+   pv_dep:["First departure","1ª saída","1ª salida","1er départ","Erster Abflug","最初の出発","首次出发","첫 출발"],
+   pv_mode:["Mode","Modo","Modo","Mode","Modus","モード","模式","모드"],
+   pv_free:["Free","Livre","Libre","Libre","Frei","フリー","自由","자유"],
+   pv_dest:["destination","destino","destino","destination","Ziel","目的地","目的地","목적지"],
+   pv_varies:["varies","varia","varía","variable","variabel","変動","变动","변동"],
+   pv_auto:["auto","auto","auto","auto","auto","自動","自动","자동"],
+   pv_flights:["flights","voos","vuelos","vols","Flüge","便","班","편"]
  };
  const ft=(k,p)=>{let s=(T[k][LANGS.indexOf(lang)]||T[k][0]);if(p)for(const x in p)s=s.split("{"+x+"}").join(p[x]);return s};
  const EF={day:0,liv:false,key:""};
@@ -144,30 +153,43 @@
    const sig=html.length+"|"+(RS.pf?pfKey(RS.pf):"");
    if(el.dataset.sig!==sig){el.dataset.sig=sig;el.innerHTML=html}}
 
- /* ── barra de resumo no rodapé ── */
+ /* ── prévia da escala (rodapé): rota, modo, 1ª saída, duração, voos/dia e total estimado ── */
+ function tt(k,p){return typeof t==="function"?(t(k,p)||""):"";}
  function summaryHTML(){
    if(typeof RS==="undefined"||RS.roster)return"";
    const ac=typeof acById==="function"?acById(RS.ac):null;
-   const pf=RS.pf,dep=RS.dep||"";
-   let parts=[];
-   if(ac)parts.push(`<span class="ef-sum-tag plate al-plate${plLen(ac.registration)}"${plateStyle(ac.airline)}>${esc(ac.registration)}</span>`);
-   if(pf){const iata=(typeof AIRLINE_IATA!=="undefined"&&AIRLINE_IATA[pf.al])||pf.code;
-     parts.push(`${esc(iata+" "+pf.f.fno)} · ${esc(pf.f.dep||dep)} → ${esc(pf.f.arr)}`)}
-   else if(dep)parts.push(esc(dep));
+   const pf=RS.pf,dep=RS.dep||"—";
+   const dest=pf&&pf.f?pf.f.arr:null;
    const days=RS.days||1;
-   const dayLbl=typeof t==="function"?(days===1?t("rs_day1")||"1 dia":t("rs_daysN",{n:days})||days+" dias"):days+" d";
-   parts.push(`<small class="muted">${esc(dayLbl)}</small>`);
-   if(pf&&pf.f)parts.push(`<small class="muted">${utcHM(pf.f.std)}Z</small>`);
+   const dayLbl=days===1?(tt("rs_day1")||"1 dia"):(tt("rs_daysN",{n:days})||days+" dias");
+   const legs=RS.legs||0;                               /* 0 = automático */
+   const fpdLbl=legs?String(legs):ft("pv_auto");
+   const totalTxt=legs?String(days*legs):ft("pv_varies");
+   const alName=(ac&&ac.airline)||(typeof ACP!=="undefined"&&ACP.rs&&ACP.rs.al&&ACP.rs.al!=="all"?ACP.rs.al:"—");
+   const start=RS.start>0?RS.start:0;
+   const depTxt=start?`${esc(typeof fmtT==="function"?fmtT(start):"")} <small class="muted">${esc(utcHM(start))}Z</small>`:"—";
+   const cell=(k,v)=>`<span class="ef-pv-c"><i>${esc(k)}</i><b>${v}</b></span>`;
+   const route=`<div class="ef-pv-route">${alSym(alName)||""}<b>${esc(dep)}</b><span class="ef-pv-arr">→</span><span class="${dest?"":"muted"}">${esc(dest||ft("pv_dest"))}</span></div>`;
+   const cells=`<div class="ef-pv-cells">`
+     +cell(ft("pv_mode"),esc(RS.other?ft("pv_free"):tt("rs_rpl")||"RPL"))
+     +cell(ft("pv_dep"),depTxt)
+     +cell(tt("rs_days")||"Duração",esc(dayLbl))
+     +cell(tt("rs_legs")||"Voos/dia",esc(fpdLbl))
+     +cell(tt("airline")||"Companhia",ac?`<span class="plate al-plate${plLen(ac.registration)}"${plateStyle(ac.airline)}>${esc(ac.registration)}</span>`:esc(alName))
+     +`</div>`;
+   const total=`<div class="ef-pv-total"><i>${esc(ft("pv_total"))}</i><b>${esc(totalTxt)} <small>${esc(ft("pv_flights"))}</small></b></div>`;
    const dis=!RS.ac||RS.left===0||RS.left==="missing"||RS.busy;
-   const genLbl=typeof t==="function"?(RS.roster?t("rs_regen")||"Gerar escala":t("rs_gen")||"Gerar escala"):"Gerar escala";
-   return`<div class="ef-sum-info">${parts.join(" · ")}</div><button class="btn primary ef-sum-btn" type="submit"${dis?" disabled":""}>${esc(genLbl)} →</button>`}
+   const genLbl=RS.roster?(tt("rs_regen")||"Gerar escala"):(tt("rs_gen")||"Gerar escala");
+   return`<div class="ef-pv-head"><span class="ef-pv-ttl">${esc(ft("pv"))}</span><span class="ef-pv-live">●</span></div>`
+     +route+cells+total
+     +`<button class="btn primary ef-sum-btn" type="submit"${dis?" disabled":""}>${esc(genLbl)} →</button>`}
 
  function updateSummary(v,form){
    if(typeof RS==="undefined"||RS.roster)return;
    let el=form.querySelector(".ef-summary");
    const html=summaryHTML();
    if(!el){el=document.createElement("div");el.className="ef-summary";form.appendChild(el)}
-   const sig=html.length+"|"+(RS.ac||"")+(RS.pf?pfKey(RS.pf):"");
+   const sig=html.length+"|"+(RS.ac||"")+(RS.pf?pfKey(RS.pf):"")+"|"+(RS.days||1)+"|"+(RS.legs||0)+"|"+(RS.other?1:0)+"|"+(RS.start||0);
    if(el.dataset.sig!==sig){el.dataset.sig=sig;el.innerHTML=html}}
 
  /* ── verso: dia a dia com abas ── */
@@ -276,11 +298,33 @@
 #view.ef .ef-foot{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;grid-column:1/-1}
 #view.ef .ef-foot>*{margin:0}
 
-/* ── barra de resumo ── */
-#view.ef .ef-summary{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;flex-wrap:wrap}
-#view.ef .ef-sum-info{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.84rem;min-width:0}
-#view.ef .ef-sum-tag{font-size:.8rem}
-#view.ef .ef-sum-btn{flex-shrink:0;min-height:38px;padding:6px 20px}
+/* ── prévia da escala (rodapé) ── */
+#view.ef .ef-summary{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:8px 16px;padding:10px 16px;background:var(--sunk);border:1px solid var(--line);border-radius:10px}
+#view.ef .ef-pv-head{grid-column:1;display:flex;flex-direction:column;gap:2px;padding-right:12px;border-right:1px solid var(--line)}
+#view.ef .ef-pv-ttl{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+#view.ef .ef-pv-live{color:var(--ok);font-size:.7rem;line-height:1}
+#view.ef .ef-pv-route{grid-column:2;display:flex;align-items:center;gap:7px;font-weight:700;font-size:1.05rem;min-width:0}
+#view.ef .ef-pv-route .al-sym{width:20px;height:20px;flex:none}
+#view.ef .ef-pv-route .ef-pv-arr{color:var(--accent)}
+#view.ef .ef-pv-route>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#view.ef .ef-pv-cells{grid-column:1/3;grid-row:2;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
+#view.ef .ef-pv-c{display:flex;flex-direction:column;gap:1px;min-width:0}
+#view.ef .ef-pv-c>i{font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;font-style:normal}
+#view.ef .ef-pv-c>b{font-size:.82rem;font-weight:600}
+#view.ef .ef-pv-c>b small{color:var(--muted);font-weight:400}
+#view.ef .ef-pv-total{grid-column:3;grid-row:1/span 2;align-self:center;display:flex;flex-direction:column;gap:1px;text-align:right;background:var(--plate);color:var(--plate-ink);border-radius:8px;padding:8px 14px}
+#view.ef .ef-pv-total>i{font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;opacity:.8;font-weight:600;font-style:normal}
+#view.ef .ef-pv-total>b{font-size:1.25rem;font-weight:700;line-height:1.05}
+#view.ef .ef-pv-total>b small{font-size:.62rem;opacity:.8;font-weight:500}
+#view.ef .ef-sum-btn{grid-column:4;grid-row:1/span 2;align-self:center;min-height:42px;padding:8px 22px;font-weight:700}
+@media (max-width:860px){
+#view.ef .ef-summary{grid-template-columns:1fr auto}
+#view.ef .ef-pv-head{grid-column:1/-1;flex-direction:row;align-items:center;gap:6px;border-right:0;border-bottom:1px solid var(--line);padding:0 0 6px}
+#view.ef .ef-pv-route{grid-column:1/-1}
+#view.ef .ef-pv-cells{grid-column:1/-1;grid-row:auto}
+#view.ef .ef-pv-total{grid-column:1;grid-row:auto;flex-direction:row;align-items:baseline;gap:8px;text-align:left}
+#view.ef .ef-sum-btn{grid-column:2;grid-row:auto}
+}
 
 /* ── lista RPL ── */
 #view.ef .ef-rpl-list{flex:1;min-height:0;display:flex;flex-direction:column;gap:4px}
