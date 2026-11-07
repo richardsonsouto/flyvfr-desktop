@@ -8,6 +8,16 @@ function opsRosterText(key){
  };
  return labels[key][LANGS.indexOf(lang)]||labels[key][0];
 }
+/* rótulos dos passos guiados (empilhados no celular) */
+function opsStepText(i){
+ const L=[
+  ['Where you depart','De onde você parte','Desde dónde sale',"D'où partez-vous",'Startflughafen','出発地','出发地','출발지'],
+  ['How to fly','Como voar','Cómo volar','Comment voler','Flugmodus','飛び方','飞行方式','비행 방식'],
+  ['Airline & aircraft','Companhia e aeronave','Compañía y aeronave','Compagnie et avion','Airline & Flugzeug','航空会社と機材','航空公司与机型','항공사·기체'],
+  ['When to fly','Quando voar','Cuándo volar','Quand voler','Wann fliegen','いつ飛ぶか','何时飞行','비행 시점']
+ ];
+ return L[i][LANGS.indexOf(lang)]||L[i][0];
+}
 function opsRosterPaint(){
  const pane=document.querySelector('.op-roster');
  if(!pane||view!=='roster')return;
@@ -60,6 +70,13 @@ function opsRosterPaint(){
  if(!empty){empty=document.createElement('p');empty.className='ops-roster-empty';pane.append(empty)}
  empty.hidden=state.stage!=='review'||!!RS.roster;
  empty.textContent=t('rs_gen');
+ /* passos guiados: numera os blocos (os eyebrows só aparecem no celular, via CSS) */
+ if(state.stage==='config'&&!RS.roster){
+  ['.rs-top-moved','.rs-mode-field','.rs-sidebar-main','.rs-layout-sidebar'].forEach((sel,i)=>{
+   const el=pane.querySelector(sel);if(!el)return;const lab=opsStepText(i);
+   if(el.dataset.step!==String(i+1)||el.dataset.eyebrow!==lab){el.dataset.step=String(i+1);el.dataset.eyebrow=lab}
+  });
+ }
 }
 document.addEventListener('click',event=>{
  if(event.target.closest('[data-action="rs-other"][data-v="1"]'))RS.opsNoRpl=false;

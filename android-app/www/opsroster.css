@@ -68,4 +68,15 @@
   box-shadow:0 -6px 18px rgba(0,0,0,.08)}
  .op-roster[data-stage=config] .rs-actions>div>b{font-size:.82rem}
  .op-roster[data-stage=config] .rs-actions button[type=submit]{min-height:44px;padding:10px 20px;font-weight:700}
+
+ /* passos guiados: título no topo (::before) + círculo numerado (::after, absoluto) */
+ .op-roster[data-stage=config] [data-eyebrow]{position:relative;padding-left:27px}
+ .op-roster[data-stage=config] [data-eyebrow]::before{
+  content:attr(data-eyebrow);display:flex;align-items:center;min-height:20px;
+  font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;font-weight:700;
+  color:var(--accent);margin:0 0 8px}
+ .op-roster[data-stage=config] [data-eyebrow]::after{
+  content:attr(data-step);position:absolute;left:0;top:0;
+  width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+  font-size:.74rem;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
 }
