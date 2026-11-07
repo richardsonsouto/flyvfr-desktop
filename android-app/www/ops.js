@@ -204,7 +204,7 @@
     <section class="op-c" data-op-pane="ev"><div class="op-hd"><h3>${esc(ot("ev"))}</h3><button type="button" class="linkish" data-view="events">${esc(ot("see"))} ›</button></div>
      ${evs.length?evs.map(e=>`<div class="op-r op-rk"><span>🤝</span><span><b>${esc(e.title)}</b><small class="muted">${esc(fmt(e.start))}${e.dep?` · ${esc(e.dep)}${e.arr?" → "+esc(e.arr):""}`:""}</small></span><button type="button" class="linkish" data-view="events">${esc(ot("see"))}</button></div>`).join(""):`<p class="muted">${esc(ot("evNone"))}</p>`}</section><footer class="op-pages"></footer></div></div></div>`}
  const compactScreen=matchMedia("(max-width:800px)");
- let deskTab="rpl",phoneTab="rpl",pageIndex=0;
+ let deskTab="air",phoneTab="air",pageIndex=0;
  const rosterView=viewRoster;
  window.opsRosterAirline=()=>view==="roster"?alNow():"";
  const allRosterFlights=rsSoonFlights;
@@ -219,7 +219,7 @@
   return rosterDefaults.apply(this,arguments);
  };
  viewRoster=function(){return viewOps()};
- const tabNames={rpl:()=>rplHelpText("label"),scale:()=>t("nav_roster"),air:()=>ot("air"),rank:()=>ot("rank"),mx:()=>ot("mx"),ev:()=>ot("ev")};
+ const tabNames={air:()=>ot("air"),rpl:()=>rplHelpText("label"),scale:()=>t("nav_roster"),rank:()=>ot("rank"),mx:()=>ot("mx"),ev:()=>ot("ev")};
  function sectionButtons(){return Object.entries(tabNames).map(([id,label])=>{
    const button=`<button type="button" class="btn small" data-op-tab="${id}">${esc(label())}</button>`;
    return id==="rpl"?`<div class="op-scheduled-tab">${button}<button class="btn small" type="button" data-rpl-help aria-label="${esc(rplHelpText('title'))}" aria-haspopup="dialog">ⓘ</button></div>`:button;
@@ -235,7 +235,8 @@
    const selected=view==="roster"?"scale":deskTab;
    root.classList.toggle("op-generating",selected==="scale");
    const mapPanel=root.querySelector(".op-map-panel");
-   mapPanel.hidden=selected==="scale";
+   /* o mapa só aparece em "No ar agora"; nas outras abas o conteúdo ocupa a largura toda */
+   mapPanel.hidden=selected!=="air";root.classList.toggle("op-nomap",selected!=="air"&&selected!=="scale");root.classList.toggle("op-air",selected==="air");
    for(const button of root.querySelectorAll("[data-op-tab]")){
      button.setAttribute("aria-pressed",String(button.dataset.opTab===selected));
    }
@@ -293,6 +294,8 @@
  if(typeof render==="function"){const rr=render;render=function(){const r=rr.apply(this,arguments);try{if((view==="ops"||view==="roster")&&session){paintPanes();if(view==="roster"){if(O.map){O.center=O.map.getCenter();O.zoom=O.map.getZoom();O.map.remove();O.map=null}opsRosterPaint()}else initMap()}else if(O.map){try{O.center=O.map.getCenter();O.zoom=O.map.getZoom();O.map.remove()}catch(e){}O.map=null;O.lay=null;O.play=false}}catch(e){console.warn(e)}return r}}
  setInterval(()=>{if((view==="ops"||view==="roster")&&!document.hidden){netFetch();if(O.mode==="now")draw()}},30e3);
  const css=`.op{display:grid;gap:14px}
+.op-map-panel[hidden]{display:none!important}.op-nomap .op-g{display:block}.op-nomap .op-side{width:100%}
+@media(max-width:800px){.op.op-air{height:auto!important}.op.op-air .op-g{grid-template-rows:auto auto}.op.op-air .op-mapbox,.op.op-air .op-map{height:280px!important;min-height:280px}.op.op-air [data-op-pane="air"]{max-height:none;overflow:visible}}
 .op-hero{border-radius:14px;padding:16px 20px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
 .op-lg{width:76px;height:76px;border-radius:12px;background:#fff;display:grid;place-items:center;font:700 1.1rem var(--f-mono);color:#13202E;overflow:hidden}.op-lg img,.op-lg svg{display:block;width:62px;height:62px;max-width:62px;max-height:62px;object-fit:contain;margin:0}
 .op-kk{font:600 .8rem var(--f-display);letter-spacing:.16em;text-transform:uppercase;opacity:.85}.op-hero h2{margin:0;font:700 2rem/1.05 var(--f-display)}.op-hero small{opacity:.9;font-size:.8rem}
@@ -320,7 +323,7 @@
 .op-trk input{width:100%;margin:2px 0 0;accent-color:var(--opc)}.op-ticks{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;font:500 .64rem var(--f-mono);color:var(--muted)}
 .op-nowmk{position:absolute;top:0;font:600 .62rem var(--f-mono);color:#B88600;border-left:2px solid #F5B800;padding-left:3px;height:30px}
 .op-range{font-size:.76rem;text-align:right}.op-note{margin:8px 0 0;font-size:.76rem}
-.op-r{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:.84rem}.op-r:first-of-type{border-top:0}
+.op-r{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:.84rem}.op-r:first-of-type{border-top:0}.op-r:not(.op-dep):has(>:nth-child(3)){grid-template-columns:auto minmax(0,1fr) auto}
 .op-r small{display:block;font-size:.74rem;color:var(--muted)}#op-rpl{container-type:inline-size}.op-r.op-dep{grid-template-columns:6ch minmax(0,1fr) minmax(0,1fr);align-items:start;gap:10px;padding:9px 0}.op-dep-flight,.op-dep-state{display:grid;align-content:start;gap:3px}.op-dep-route{white-space:nowrap}.op-dep-state .btn{justify-self:start;white-space:normal}.op-dep-state small{line-height:1.35}.op-dep-state small:first-child:not(.muted){font-family:var(--f-mono)}@container(max-width:320px){.op-r.op-dep{grid-template-columns:6ch minmax(0,1fr);row-gap:4px}.op-dep-state{grid-column:2}}
 .op-src{font:600 .62rem var(--f-mono);padding:2px 6px;border-radius:4px}.op-src.vfr{background:#F5B800;color:#13202E}.op-src.vat{background:#2A6FD6;color:#fff}.op-src.ivao{background:#0D2C99;color:#fff}
 .op-pb{height:4px;border-radius:3px;background:var(--sunk);margin-top:4px;overflow:hidden}.op-pb i{display:block;height:100%;background:var(--opc)}
