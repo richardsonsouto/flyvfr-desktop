@@ -206,7 +206,7 @@
     <section class="op-c" data-op-pane="mx"><div class="op-hd"><h3>${esc(ot("mx"))}</h3></div>
      ${mx.length?mx.map(x=>{const a=acById(x.id),d=data.defects.filter(q=>q.aircraftId===x.id&&!q.voidedAt).sort((p,q)=>q.createdAt-p.createdAt)[0],loc=posNow(x.id)||"";
       return`<div class="op-r"><span>${regTag(a,x.id)}</span><span>${esc([loc,d?defTitle(d):""].filter(Boolean).join(" · "))}${x.s.until?`<small class="muted">${esc(ot("until",{t:fmt(x.s.until)}))}</small>`:""}</span><button type="button" class="op-chip ${x.s.key==="bad"?"bad":"warn"}" data-action="open-aircraft" data-id="${esc(x.id)}">${x.s.key==="bad"?"AOG":"MEL"}</button></div>`}).join(""):`<p class="muted">${esc(ot("mxNone"))}</p>`}</section>
-    <section class="op-c" data-op-pane="ev"><div class="op-hd"><h3>${esc(ot("ev"))}</h3><button type="button" class="linkish" data-view="events">${esc(ot("see"))} ›</button></div>
+    <section class="op-c" data-op-pane="rv"></section><section class="op-c" data-op-pane="ev"><div class="op-hd"><h3>${esc(ot("ev"))}</h3><button type="button" class="linkish" data-view="events">${esc(ot("see"))} ›</button></div>
      ${evs.length?evs.map(e=>`<div class="op-r op-rk"><span>🤝</span><span><b>${esc(e.title)}</b><small class="muted">${esc(fmt(e.start))}${e.dep?` · ${esc(e.dep)}${e.arr?" → "+esc(e.arr):""}`:""}</small></span><button type="button" class="linkish" data-view="events">${esc(ot("see"))}</button></div>`).join(""):`<p class="muted">${esc(ot("evNone"))}</p>`}</section><footer class="op-pages"></footer></div></div></div>`}
  const compactScreen=matchMedia("(max-width:800px)");
  let deskTab="air",phoneTab="air",pageIndex=0;
@@ -224,7 +224,7 @@
   return rosterDefaults.apply(this,arguments);
  };
  viewRoster=function(){return viewOps()};
- const tabNames={air:()=>ot("air"),rpl:()=>rplHelpText("label"),scale:()=>t("nav_roster"),rank:()=>ot("rank"),mx:()=>ot("mx"),ev:()=>ot("ev")};
+ const tabNames={air:()=>ot("air"),rpl:()=>rplHelpText("label"),scale:()=>t("nav_roster"),rank:()=>ot("rank"),mx:()=>ot("mx"),rv:()=>t("nav_reviews"),ev:()=>ot("ev")};
  function sectionButtons(){return Object.entries(tabNames).map(([id,label])=>{
    const button=`<button type="button" class="btn small" data-op-tab="${id}">${esc(label())}</button>`;
    return id==="rpl"?`<div class="op-scheduled-tab">${button}<button class="btn small" type="button" data-rpl-help aria-label="${esc(rplHelpText('title'))}" aria-haspopup="dialog">ⓘ</button></div>`:button;
@@ -248,6 +248,7 @@
      button.setAttribute("aria-pressed",String(button.dataset.opTab===selected));
    }
    for(const pane of root.querySelectorAll("[data-op-pane]"))pane.hidden=pane.dataset.opPane!==selected;
+   if(selected==="rv"){const rvP=root.querySelector('[data-op-pane="rv"]');if(rvP&&!rvP.querySelector("#report-review-panel")){rvP.innerHTML=`<div class="op-hd"><h3>${esc(t("nav_reviews"))}</h3></div><section id="report-review-panel" class="panel"></section>`}if(typeof reportReviewPaint==="function")reportReviewPaint();if(typeof loadReportReviews==="function")loadReportReviews()}
    fitOps();
    const footer=root.querySelector(".op-pages");footer.replaceChildren();footer.hidden=true;
    for(const pane of root.querySelectorAll("[data-op-pane]")){

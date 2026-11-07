@@ -8,10 +8,7 @@ if(typeof viewFleet==="function"){const rvFleet=viewFleet;viewFleet=function(){i
   return`<div class="sec-head"><div><span class="eyebrow">${esc(t("rv_eyebrow"))}</span><h2>${esc(t("nav_reviews"))}</h2></div></div>
    <p class="muted rv-intro">${esc(IS_ADMIN()?t("rv_intro_admin"):reviewText("help"))}</p>`}}
 /* botão no menu, logo depois do Diário de bordo */
-if(typeof paintChrome==="function"){const rvChrome=paintChrome;paintChrome=function(){const r=rvChrome.apply(this,arguments);const tabs=document.getElementById("tabs");
-  if(tabs&&session&&!tabs.querySelector('[data-view="reviews"]')){const after=tabs.querySelector('[data-view="logbook"]');const b=document.createElement("button");b.className="tab";b.dataset.view="reviews";b.title=t("nav_reviews");b.setAttribute("aria-current",view==="reviews"?"page":"false");b.innerHTML=`${NAV_ICON.reviews}<span>${esc(t("nav_reviews"))}</span>`;
-    if(after)after.after(b);else tabs.append(b)}
-  return r}}
+/* botão do menu lateral removido — análise de reportes agora é aba dentro de Operações */
 
 /* Apoie: o quadro "Doe pelo Pix" (QR Code e código copia e cola) vai para o final da página */
 if(typeof render==="function"){const rvRender=render;render=function(){const r=rvRender.apply(this,arguments);
@@ -28,7 +25,7 @@ function trkTopChip(){const top=document.querySelector(".top-in"),title=document
   btn.className="btn small trk-top-btn";el.append(btn);title.after(el);top.classList.add("has-trk")}
 if(typeof render==="function"){const ttRender=render;render=function(){const r=ttRender.apply(this,arguments);try{trkTopChip()}catch(e){}return r}}
 /* Ordem dos menus pela jornada do piloto: meu voo (planejar → voar → registrar), depois consulta, depois ajuda */
-const NAV_ORDER=[["roster","bookings","briefing","logbook","reviews"],["fleet","map","events","catalog"],["manual","support","admin"]];
+const NAV_ORDER=[["roster","bookings","briefing","logbook"],["fleet","map","events","catalog"],["manual","support","admin"]];
 function navReorder(){const tabs=document.getElementById("tabs");if(!tabs)return;tabs.querySelectorAll(".tab-sep").forEach(s=>s.remove());
   const all=[...tabs.querySelectorAll(":scope>.tab[data-view]")],known=NAV_ORDER.flat(),used=new Set(),frag=document.createDocumentFragment();
   NAV_ORDER.forEach((group,gi)=>{const items=group.map(v=>all.find(b=>b.dataset.view===v)).filter(Boolean);

@@ -56,6 +56,6 @@
 }
 @media(max-width:800px){.op-roster .rs-grid{grid-template-columns:minmax(0,1fr)!important}.op-generating .op-side{display:flex}.op-roster .rs-layout-sidebar{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 
-.op-top-tabs:has([data-op-tab="scale"]){grid-template-columns:repeat(6,minmax(0,1fr))}
+.op-top-tabs:has([data-op-tab="scale"]){grid-template-columns:repeat(7,minmax(0,1fr))}
 .op-top-tabs .btn{display:flex;align-items:center;justify-content:center;text-align:center}
 @media(max-width:800px){.op-top-tabs:has([data-op-tab="scale"]){grid-template-columns:repeat(3,minmax(0,1fr))}}

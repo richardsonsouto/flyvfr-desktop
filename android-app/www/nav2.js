@@ -41,7 +41,7 @@
   report:IC('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4v2h6V4M9 13l2 2 4-4"/>'),
   cal:IC('<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v4M10 15h4"/>')};
  /* ---------- 1. menu por fases ---------- */
- const GROUPS=[["plan",["roster","bookings","fleet"]],["fly",["briefing","map","ops"]],["log",["logbook","reviews","catalog"]],["comm",["@rank","events"]],["help",["manual","support","admin"]]];
+ const GROUPS=[["plan",["roster","bookings","fleet"]],["fly",["briefing","map","ops"]],["log",["logbook","catalog"]],["comm",["@rank","events"]],["help",["manual","support","admin"]]];
  function navGroups(){const tabs=document.getElementById("tabs");if(!tabs||!session||recovering)return;
   tabs.querySelectorAll(".tab-sep,.nv-gh,.nv-rank,.nv-search").forEach(x=>x.remove());
   const all=[...tabs.querySelectorAll(":scope>.tab[data-view]")],by=v=>all.find(b=>b.dataset.view===v),used=new Set(),frag=document.createDocumentFragment();
