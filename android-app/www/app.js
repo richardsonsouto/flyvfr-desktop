@@ -66,11 +66,15 @@ const MAP={
     phase:r.phase,simulator:r.simulator,outcome:r.outcome,repairH:r.repair_h,deferDays:r.defer_days,deferredUntil:ms(r.deferred_until),opsProcedure:r.ops_procedure,createdAt:ms(r.created_at),voidedAt:ms(r.voided_at)}),
 };
 async function fetchAll(table){
-  const out=[];const page=1000;
-  for(let from=0;;from+=page){
-    const {data:rows,error}=await sb.from(table).select("*").order(table==="aircraft"?"registration":"id").range(from,from+page-1);
-    if(error)throw error; out.push(...rows); if(rows.length<page)break;
-  }
+  /* (mais rápido) a 1ª página já traz o total; as demais páginas vêm todas ao mesmo tempo */
+  const page=1000,ord=table==="aircraft"?"registration":"id";
+  const first=await sb.from(table).select("*",{count:"exact"}).order(ord).range(0,page-1);
+  if(first.error)throw first.error;const out=[...first.data];
+  if(first.data.length<page)return out;
+  const total=Number.isFinite(first.count)?first.count:null;
+  if(total==null){for(let from=page;;from+=page){const {data:rows,error}=await sb.from(table).select("*").order(ord).range(from,from+page-1);if(error)throw error;out.push(...rows);if(rows.length<page)break}return out}
+  const reqs=[];for(let from=page;from<total;from+=page)reqs.push(sb.from(table).select("*").order(ord).range(from,from+page-1));
+  for(const r of await Promise.all(reqs)){if(r.error)throw r.error;out.push(...r.data)}
   return out;
 }
 async function load(table){
@@ -85,7 +89,9 @@ function showRosterLocked(){openSheet('roster-locked',`${head('',t('rs_locked_ti
 let favStart=false;
 async function loadEverything(){
   /* escalas cujo prazo de liberação do último voo já passou: cancela os voos não realizados (21_escala_sem_cancelamento.sql) */
-  if(sb&&session){try{await Promise.race([Promise.resolve(sb.rpc("expire_rosters")),new Promise(r=>setTimeout(r,4000))])}catch(e){}}
+  /* (mais rápido) a limpeza roda em paralelo com o carregamento; quando termina, só as reservas são relidas */
+  const expP=sb&&session?Promise.race([Promise.resolve(sb.rpc("expire_rosters")).catch(()=>null),new Promise(r=>setTimeout(r,4000))]):null;
+  lastFullLoad=Date.now();
   await Promise.all([...["aircraft","reservations","flights","defects","profiles"].map(load),typeof loadMoves==="function"?loadMoves():null,loadSupport(),loadFavs(),loadEvents(),loadBlocked(),typeof loadLiveTracks==="function"?loadLiveTracks():null]);
   if(typeof liveSubscribe==="function")liveSubscribe();
   /* ao abrir o app (uma vez por login), quem tem favoritas começa vendo só elas na Frota */
@@ -95,7 +101,9 @@ async function loadEverything(){
        os demais, na Escala (já com a cidade/país do piloto) */
     const now=Date.now(),hasRoster=data.reservations.some(r=>r.pilotId===myId&&r.rosterId&&r.status==="booked"&&r.end>now);
     view=hasRoster?"bookings":"roster";if(typeof rsHomeInit==="function")rsHomeInit()}
-  render()}
+  render();
+  if(expP)expP.then(async()=>{const before=JSON.stringify(data.reservations.map(r=>r.id+r.status));await load("reservations");if(JSON.stringify(data.reservations.map(r=>r.id+r.status))!==before)render()})}
+let lastFullLoad=0;
 /* ---------- Favoritas: tabela favorites no Supabase (03_favorites.sql); sem a tabela, ficam só neste aparelho ---------- */
 let favs=new Set(),favLocal=false;
 const isFav=id=>favs.has(id);
@@ -2056,7 +2064,8 @@ function clearData(){favs=new Set();fFav=false;favStart=false;try{EVENTS=[];BLOC
 })();
 window.addEventListener("online",()=>{if(session)loadEverything();else render()});
 window.addEventListener("offline",()=>render());
-document.addEventListener("visibilitychange",()=>{if(!document.hidden&&session)loadEverything()});
+/* (mais rápido) ao voltar para o app, só recarrega tudo se já passou 1 minuto desde a última carga */
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&session&&Date.now()-lastFullLoad>60000)loadEverything()});
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;paintMe()});
 window.addEventListener("appinstalled",()=>{installPrompt=null;paintMe();paintChrome();toast(t("install_done"))});
 /* botão "Instale em seu PC": usa o convite do navegador quando existe; senão mostra o passo a passo */
@@ -2086,6 +2095,7 @@ document.addEventListener("click",async e=>{
   if(isWinPC()){downloadExe();sheetInstallExe();return}
   if(installPrompt){const p=installPrompt;installPrompt=null;try{p.prompt();const r=await p.userChoice;if(r&&r.outcome==="accepted"){paintChrome();return}}catch(x){}paintMe();return}
   sheetInstall()});
-if("serviceWorker" in navigator&&location.protocol!=="file:"&&!window.vfrNative)navigator.serviceWorker.register("sw.js").catch(()=>{});
+/* (mais rápido) o cache offline (~6 MB na 1ª visita) só começa a baixar depois que a página abriu, sem disputar a internet com os dados */
+if("serviceWorker" in navigator&&location.protocol!=="file:"&&!window.vfrNative){const swReg=()=>setTimeout(()=>navigator.serviceWorker.register("sw.js").catch(()=>{}),3000);if(document.readyState==="complete")swReg();else window.addEventListener("load",swReg,{once:true})}
 setInterval(()=>{if(session&&!document.hidden&&view!=="map"&&!(document.activeElement&&document.activeElement.id==="f-q"))render()},30000);
 render();
