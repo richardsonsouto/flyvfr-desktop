@@ -212,5 +212,5 @@ const flRenderOrig=render;
 render=function(){flRenderOrig.apply(this,arguments);
   if(!session||recovering||booting||!FL.loaded)return;
   if(FL.supported&&!FL.mode){$("#view").innerHTML=flGateHTML();return}
-  if(FL.supported&&view==="roster"&&!flIsFree()&&!document.querySelector("#view .fl-bar")){const v=$("#view"),d=document.createElement("div");d.className="fl-bar fl-bar-top";d.innerHTML=`<span class="chip neutral">✈ ${ft("fl_airline")}</span><button class="linkish" data-action="fl-mode">${ft("fl_change")}</button>`;v.insertBefore(d,v.firstChild)}
+  /* (removida) a faixa "✈ Piloto de companhia · Trocar perfil" no topo; a troca de perfil continua em Perfil */
   if(flIsFree()){if(view==="roster"){const pt=$("#page-title");if(pt)pt.textContent=ft("fl_nav")}const b=document.querySelector('#tabs [data-view="roster"]');if(b){const s=b.querySelector("span");if(s)s.textContent=ft("fl_nav");if(!b.classList.contains("tab-off"))b.title=ft("fl_nav")}}};
