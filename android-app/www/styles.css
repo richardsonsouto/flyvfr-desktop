@@ -1640,7 +1640,7 @@ a.btn.dispatch-link img{width:18px;height:18px;object-fit:contain;margin:0;flex:
 .rs-grid>.rs-al{grid-column:1/-1}
 .rs-al .alpick-btn{width:100%;max-width:none;min-height:44px}
 .rs-al .alpick-caret{margin-left:auto}
-.rs-al .alpick-pop{left:0;right:auto;width:min(380px,100%)}
+.rs-al .alpick-pop{left:0;right:auto;width:min(380px,86vw)}
 
 /* aeronaves no aeródromo de partida: menu suspenso */
 .rdi{position:relative;width:100%}

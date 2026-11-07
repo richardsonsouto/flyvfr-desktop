@@ -2,7 +2,8 @@
 .op-generating .op-kpis{display:none}
 .op-generating .op-g{display:block;min-height:0}
 .op-generating .op-side{display:flex;height:100%;min-height:0}
-.op-generating .op-roster{flex:0 1 auto;min-width:0;max-height:100%;overflow:auto}
+.op-generating .op-roster{flex:0 1 auto;min-width:0;max-height:100%;overflow:clip auto}
+.op-roster:has(.alpick-pop:not([hidden])){overflow:visible}
 .op-roster{display:flex;flex-direction:column;gap:7px}
 .op-roster .ops-roster-unavailable{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .op-roster:has(.ops-roster-unavailable:not([hidden])) .sd-note{display:none}
