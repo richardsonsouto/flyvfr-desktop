@@ -1611,7 +1611,7 @@ a.btn.dispatch-link img{width:18px;height:18px;object-fit:contain;margin:0;flex:
 .alpick-all{width:22px;height:22px;display:inline-grid;place-items:center;flex:none;color:var(--muted)}
 .alpick-caret{color:var(--muted);font-size:.8rem;margin-left:2px}
 .alpick-btn:hover,.alpick-btn[aria-expanded="true"]{border-color:var(--accent)}
-.alpick-pop{position:absolute;right:0;top:calc(100% + 6px);z-index:1200;width:min(380px,86vw);background:var(--sheet);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 12px 30px rgba(0,0,0,.25);padding:8px;display:grid;gap:6px}
+.alpick-pop{position:absolute;right:0;top:calc(100% + 6px);z-index:1200;width:min(420px,90vw);background:var(--sheet);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 12px 30px rgba(0,0,0,.25);padding:8px;display:grid;gap:6px}
 .alpick-pop[hidden]{display:none}
 .alpick-q{width:100%}
 .alpick-list{max-height:340px;overflow:auto;display:grid;gap:2px}
@@ -1640,7 +1640,7 @@ a.btn.dispatch-link img{width:18px;height:18px;object-fit:contain;margin:0;flex:
 .rs-grid>.rs-al{grid-column:1/-1}
 .rs-al .alpick-btn{width:100%;max-width:none;min-height:44px}
 .rs-al .alpick-caret{margin-left:auto}
-.rs-al .alpick-pop{left:0;right:auto;width:min(380px,86vw)}
+.rs-al .alpick-pop{left:0;right:auto;width:min(420px,90vw)}
 
 /* aeronaves no aeródromo de partida: menu suspenso */
 .rdi{position:relative;width:100%}
