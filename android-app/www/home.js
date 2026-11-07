@@ -139,7 +139,7 @@
     return`<div class="hm-av"><span><b>${esc(e.title)}</b><br><small class="muted">${esc(fmt(e.start))}${e.dep?` · ${esc(e.dep)}${e.arr?" → "+esc(e.arr):""}`:""} · ${esc(ht("pilots",{n}))}</small></span><button type="button" class="linkish" data-view="events">${esc(ht("see"))}</button></div>`}).join("")
     :`<p class="muted">${esc(ht("noEv"))}</p>`}</section>`}
  function airCard(){const now=Date.now(),fav=typeof myFavAirline==="function"?myFavAirline():"";
-  const live=data.reservations.filter(r=>booked(r)&&r.start<=now&&r.end>now&&!data.flights.some(f=>f.reservationId===r.id)),mine=fav?live.filter(r=>(acById(r.aircraftId)||{}).airline===fav):live;
+  const trk=new Set((typeof liveTracks==="function"?liveTracks():[]).map(k=>k.reservation_id)),live=data.reservations.filter(r=>trk.has(r.id)&&!data.flights.some(f=>f.reservationId===r.id)),mine=fav?live.filter(r=>(acById(r.aircraftId)||{}).airline===fav):live;
   const show=(mine.length?mine:live).slice(0,3),txt=mine.length&&fav?ht("airN",{n:mine.length,al:fav}):live.length?ht("airAll",{n:live.length}):"";
   return`<section class="hm-card"><div class="hm-h"><h3>${esc(ht("air"))}</h3><button type="button" class="linkish" data-view="map">${esc(t("nav_map"))} ›</button></div>
    ${txt?`<div class="hm-av"><span><b>🟢 ${esc(txt)}</b><br><small class="muted">${show.map(r=>`${esc((acById(r.aircraftId)||{}).registration||"")} ${esc(r.dep)}→${esc(r.arr)}`).join(" · ")}</small></span><button type="button" class="linkish" data-view="map">${esc(ht("see"))}</button></div>`

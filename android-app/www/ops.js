@@ -77,8 +77,10 @@
  function vfrLegs(al,from,to){const ids=ofAl(al),out=[];
   for(const r of data.reservations){if(!ids.has(r.aircraftId))continue;if(!(booked(r)||r.status==="completed"))continue;const a=eobt(r),b=eta(r);if(b<from||a>to||b<=a)continue;
    if(booked(r)&&a>Date.now())continue; /* reservas futuras não entram no replay */
-   const flown=data.flights.find(f=>f.reservationId===r.id);if(!flown&&b<Date.now()-2*H)continue; /* reserva que não voou */
-   out.push({reg:(acById(r.aircraftId)||{}).registration||r.aircraftId,ac:r.aircraftId,dep:r.dep,arr:r.arr,t0:a,t1:b,src:"vfr",who:names[r.pilotId]||""})}
+   const flown=data.flights.find(f=>f.reservationId===r.id);
+   /* o avião só "voa" no mapa se o voo foi feito (replay) ou se está sendo rastreado agora pelo simulador; reserva no horário sem rastreio fica parada no solo */
+   const tk=!flown&&typeof liveTracks==="function"?liveTracks().find(k=>k.reservation_id===r.id):null;if(!flown&&!tk)continue;
+   out.push({reg:(acById(r.aircraftId)||{}).registration||r.aircraftId,ac:r.aircraftId,dep:r.dep,arr:r.arr,t0:tk?new Date(tk.started_at||tk.last_push).getTime():a,t1:tk?Math.max(b,Date.now()+60e3):b,src:"vfr",who:names[r.pilotId]||"",live:tk||null})}
   return out.sort((x,y)=>x.t0-y.t0)}
  function departureOption(code,number,dep,arr,std,candidates){
    const [earliest,latest]=rsRplWindow();
@@ -106,7 +108,7 @@
   for(const apt in SCHED.idx[c])for(const d of realDeps(c,apt,from,to))out.push({reg:d.fno,dep:d.dep,arr:d.arr,t0:d.std,t1:d.sta,src:"rpl",typ:d.typ});
   return out.sort((x,y)=>x.t0-y.t0)}
  function range(){const now=Date.now();return O.mode==="rpl"?[now,now+6*H]:O.mode==="rep"?[now-24*H,now]:[now,now]}
- function legsNow(){const al=alNow(),[a,b]=range();if(O.mode==="rpl")return rplLegs(al,a,b);if(O.mode==="rep")return vfrLegs(al,a,b);return vfrLegs(al,Date.now()-12*H,Date.now()+H).filter(l=>l.t0<=Date.now()&&l.t1>Date.now())}
+ function legsNow(){const al=alNow(),[a,b]=range();if(O.mode==="rpl")return rplLegs(al,a,b);if(O.mode==="rep")return vfrLegs(al,a,b);return vfrLegs(al,Date.now()-12*H,Date.now()+H).filter(l=>l.live)}
  /* rede: amostras guardadas enquanto a tela está aberta (para o replay) */
  async function netFetch(force){const al=alNow(),pre=icao(al);if(!pre||!sb||O.netBusy)return;if(!force&&Date.now()-O.netAt<30e3)return;O.netBusy=true;O.netAt=Date.now();
   try{const {data:d,error}=await sb.functions.invoke("traffic",{body:{bbox:[-90,-180,90,180],nets:["VATSIM","IVAO"],prefix:pre}});
@@ -130,9 +132,15 @@
   let air=0,src={vfr:0,VATSIM:0,IVAO:0,rpl:0},landed=0;
   for(const l of legs){const a=ll(l.dep),b=ll(l.arr);if(!a||!b)continue;
    if(l.t1<=t){landed++;const age=t-l.t1;if(age<2*H)Lf.polyline([a,b],{color:COL[l.src],weight:1.5,opacity:.45*(1-age/(2*H)),interactive:false}).addTo(O.lay);continue}
-   if(l.t0>t)continue;const p=(t-l.t0)/(l.t1-l.t0),pos=[a[0]+(b[0]-a[0])*p,a[1]+(b[1]-a[1])*p];air++;src[l.src]++;
+   if(l.t0>t)continue;let pos,hd=null;
+   if(l.live){const k=l.live,cur=[k.last_lat,k.last_lon],tp=new Date(k.last_push).getTime();
+    /* rastreado: posição real enviada pelo simulador (no replay, do ponto de saída até a última posição recebida) */
+    if(t>=tp-60e3){pos=cur;hd=k.last_hdg}else{const f=Math.max(0,Math.min(1,(t-l.t0)/Math.max(1,tp-l.t0)));pos=[a[0]+(cur[0]-a[0])*f,a[1]+(cur[1]-a[1])*f]}
+    if(k.last_ground&&t>=tp-60e3){Lf.marker(pos,{icon:pIcon(Lf,COL[l.src],hd||0,lab?l.reg:""),zIndexOffset:400}).bindTooltip(`<b>${esc(l.reg)}</b> ${esc(l.dep)} → ${esc(l.arr)}${l.who?`<br>${esc(l.who)}`:""}`).addTo(O.lay);continue}}
+   else{const p=(t-l.t0)/(l.t1-l.t0);pos=[a[0]+(b[0]-a[0])*p,a[1]+(b[1]-a[1])*p]}
+   air++;src[l.src]++;
    Lf.polyline([a,pos],{color:COL[l.src],weight:2.4,opacity:.9,interactive:false}).addTo(O.lay);Lf.polyline([pos,b],{color:COL[l.src],weight:1.4,opacity:.55,dashArray:"4 6",interactive:false}).addTo(O.lay);
-   Lf.marker(pos,{icon:pIcon(Lf,COL[l.src],brg(a,b),lab?l.reg:""),zIndexOffset:500}).bindTooltip(`<b>${esc(l.reg)}</b> ${esc(l.dep)} → ${esc(l.arr)}${l.who?`<br>${esc(l.who)}`:""}${l.typ?` · ${esc(l.typ)}`:""}<br>${utc(l.t0)} → ${utc(l.t1)}`).addTo(O.lay)}
+   Lf.marker(pos,{icon:pIcon(Lf,COL[l.src],hd!=null?hd:brg(a,b),lab?l.reg:""),zIndexOffset:500}).bindTooltip(`<b>${esc(l.reg)}</b> ${esc(l.dep)} → ${esc(l.arr)}${l.who?`<br>${esc(l.who)}`:""}${l.typ?` · ${esc(l.typ)}`:""}<br>${utc(l.t0)} → ${utc(l.t1)}`).addTo(O.lay)}
   /* VATSIM/IVAO: ao vivo, ou a amostra mais próxima do instante do replay */
   if(O.mode!=="rpl"){for(const cs in O.hist){const h=O.hist[cs];let s=null;if(O.mode==="now"){const p=O.net.find(x=>x.cs===cs);if(p)s={lat:p.lat,lon:p.lon,hdg:p.hdg,net:p.net,ground:p.ground}}
     else{for(const x of h)if(Math.abs(x.t-t)<=90e3&&(!s||Math.abs(x.t-t)<Math.abs(s.t-t)))s=x}
@@ -151,8 +159,8 @@
   m.on("zoomend",()=>draw());draw();paintLists();netFetch()}
  /* ---------- listas ---------- */
  function paintLists(){const al=alNow(),ids=ofAl(al),now=Date.now();
-  const vfr=vfrLegs(al,now-12*H,now+H).filter(l=>l.t0<=now&&l.t1>now),net=O.net.filter(p=>!p.ground);
-  const box=document.getElementById("op-air");if(box)box.innerHTML=vfr.length||net.length?[...vfr.map(l=>`<div class="op-r"><span class="op-src vfr">VFR</span><div><b class="mono">${esc(l.reg)}</b> <span class="mono">${esc(l.dep)} → ${esc(l.arr)}</span><small>${esc(l.who)}</small><div class="op-pb"><i style="width:${Math.min(100,(now-l.t0)/(l.t1-l.t0)*100).toFixed(0)}%"></i></div></div><span class="mono muted">ETA ${utc(l.t1)}</span></div>`),
+  const vfr=vfrLegs(al,now-12*H,now+H).filter(l=>l.live),net=O.net.filter(p=>!p.ground);
+  const box=document.getElementById("op-air");if(box)box.innerHTML=vfr.length||net.length?[...vfr.map(l=>`<div class="op-r"><span class="op-src vfr">VFR</span><div><b class="mono">${esc(l.reg)}</b> <span class="mono">${esc(l.dep)} → ${esc(l.arr)}</span><small>${esc(l.who)}</small><small class="mono">${l.live&&l.live.last_alt!=null?`${Math.round(l.live.last_alt).toLocaleString(lang)} ft · ${Math.round(l.live.last_gs||0)} kt`:""}</small></div><span class="mono muted">${esc(l.live&&l.live.source||"")}</span></div>`),
    ...net.slice(0,8).map(p=>`<div class="op-r"><span class="op-src ${p.net==="IVAO"?"ivao":"vat"}">${esc(p.net)}</span><div><b class="mono">${esc(p.cs)}</b> <span class="mono">${esc(p.dep||"?")} → ${esc(p.arr||"?")}</span><small>${esc(p.type||"")} · FL${String(Math.round((p.alt||0)/100)).padStart(3,"0")} · ${Math.round(p.gs||0)} kt</small></div><span></span></div>`)].join(""):`<p class="muted">${esc(ot("airNone"))}</p>`;
   const rb=document.getElementById("op-rpl");if(rb){const c=icao(al),deps=rplLegs(al,...rsRplWindow()).slice(0,5);
    const byOrigin=new Map();
