@@ -27,14 +27,22 @@ let threeP=null;
 function loadThree(){if(window.THREE)return Promise.resolve();if(threeP)return threeP;
  threeP=new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.onload=()=>ok();s.onerror=()=>{threeP=null;no(new Error('three'))};document.head.appendChild(s)});
  return threeP}
-/* Mosaico NASA Blue Marble (Reto Stöckli / Robert Simmon, NASA GSFC) via Wikimedia Commons —
-   Special:FilePath aponta sempre para o arquivo atual, sem depender do hash de upload. */
-const GLOBE_TEXTURE_URL='https://commons.wikimedia.org/wiki/Special:FilePath/Land_shallow_topo_2048.jpg';
+/* Mosaico NASA Blue Marble (Reto Stöckli / Robert Simmon, NASA GSFC), a mesma imagem usada no exemplo
+   oficial de globo do three.js — servida pelo próprio pacote npm "three" (mesma versão carregada
+   acima) via dois CDNs que sempre enviam cabeçalho CORS, então a textura carrega sem o navegador
+   recusar por tainted canvas (o Wikimedia Commons, tentado antes, falhava nessa parte e caía sempre
+   no globo estilizado de reserva). Tenta o jsDelivr primeiro e o unpkg como segunda opção. */
+const GLOBE_TEXTURE_URLS=[
+ 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/textures/planets/earth_atmos_2048.jpg',
+ 'https://unpkg.com/three@0.128.0/examples/textures/planets/earth_atmos_2048.jpg'
+];
 function loadGlobeTexture(){
- return new Promise((resolve,reject)=>{
-  const loader=new THREE.TextureLoader();loader.crossOrigin='anonymous';
-  loader.load(GLOBE_TEXTURE_URL,tex=>{if('encoding' in tex)tex.encoding=THREE.sRGBEncoding;tex.anisotropy=4;resolve(tex)},undefined,()=>reject(new Error('earth-texture')))
- })}
+ const loader=new THREE.TextureLoader();loader.crossOrigin='anonymous';
+ const tryUrl=i=>new Promise((resolve,reject)=>{
+  if(i>=GLOBE_TEXTURE_URLS.length){reject(new Error('earth-texture'));return}
+  loader.load(GLOBE_TEXTURE_URLS[i],tex=>{if('encoding' in tex)tex.encoding=THREE.sRGBEncoding;tex.anisotropy=4;resolve(tex)},undefined,()=>resolve(tryUrl(i+1)))
+ });
+ return tryUrl(0)}
 function globeFallbackTexture(){
  const w=1600,h=800,cv=document.createElement('canvas');cv.width=w;cv.height=h;const ctx=cv.getContext('2d');
  ctx.fillStyle='#0d3f63';ctx.fillRect(0,0,w,h);
