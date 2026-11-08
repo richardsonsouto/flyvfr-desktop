@@ -1,7 +1,9 @@
-/* Globo 3D: visualização alternativa ao mapa 2D na tela "Mapa" — gira devagar, o piloto
-   arrasta para girar manualmente e usa a roda do mouse / pinça para aproximar. Mostra a
-   frota (por aeroporto), os voos em andamento (arco sobre a esfera) e os aeroportos onde
-   as aeronaves estão agora. Não é navegação: apenas uma visualização decorativa/informativa. */
+/* Globo 3D: visualização alternativa ao mapa 2D na tela "Mapa" — imagem real da Terra (mosaico
+   NASA Blue Marble, via Wikimedia Commons, domínio público/CC), gira devagar, o piloto arrasta
+   para girar manualmente e usa a roda do mouse / pinça para aproximar. Mostra a frota (por
+   aeroporto), os voos em andamento (arco sobre a esfera) e os aeroportos onde as aeronaves estão
+   agora. Não é navegação: apenas uma visualização decorativa/informativa. Se a imagem real não
+   carregar (sem internet, CDN bloqueado), cai para um globo estilizado desenhado localmente. */
 const GLOBE_WORDS={
  to3d:['3D globe','Globo 3D','Globo 3D','Globe 3D','3D-Globus','3D地球儀','3D地球','3D 지구본'],
  to2d:['2D map','Mapa 2D','Mapa 2D','Carte 2D','2D-Karte','2Dマップ','2D地图','2D 지도'],
@@ -12,9 +14,15 @@ let threeP=null;
 function loadThree(){if(window.THREE)return Promise.resolve();if(threeP)return threeP;
  threeP=new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.onload=()=>ok();s.onerror=()=>{threeP=null;no(new Error('three'))};document.head.appendChild(s)});
  return threeP}
-const MAP_GLOBE={renderer:null,scene:null,camera:null,group:null,raf:null,container:null,autoSpin:true,dist:255,rot:{y:.4,x:-.15}};
-function globeLL(lat,lon,r){const la=lat*Math.PI/180,lo=lon*Math.PI/180;return new THREE.Vector3(r*Math.cos(la)*Math.cos(lo),r*Math.sin(la),-r*Math.cos(la)*Math.sin(lo))}
-function globeTexture(){
+/* Mosaico NASA Blue Marble (Reto Stöckli / Robert Simmon, NASA GSFC) via Wikimedia Commons —
+   Special:FilePath aponta sempre para o arquivo atual, sem depender do hash de upload. */
+const GLOBE_TEXTURE_URL='https://commons.wikimedia.org/wiki/Special:FilePath/Land_shallow_topo_2048.jpg';
+function loadGlobeTexture(){
+ return new Promise((resolve,reject)=>{
+  const loader=new THREE.TextureLoader();loader.crossOrigin='anonymous';
+  loader.load(GLOBE_TEXTURE_URL,tex=>{if('encoding' in tex)tex.encoding=THREE.sRGBEncoding;tex.anisotropy=4;resolve(tex)},undefined,()=>reject(new Error('earth-texture')))
+ })}
+function globeFallbackTexture(){
  const w=1600,h=800,cv=document.createElement('canvas');cv.width=w;cv.height=h;const ctx=cv.getContext('2d');
  ctx.fillStyle='#0d3f63';ctx.fillRect(0,0,w,h);
  const xy=(lon,lat)=>[(lon+180)/360*w,(90-lat)/180*h];
@@ -29,26 +37,36 @@ function globeTexture(){
  for(let lon=-180;lon<=180;lon+=30){const [x]=xy(lon,0);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}
  for(let lat=-60;lat<=60;lat+=30){const [,y]=xy(0,lat);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
  ctx.strokeStyle='rgba(255,255,255,.3)';const [,eqY]=xy(0,0);ctx.beginPath();ctx.moveTo(0,eqY);ctx.lineTo(w,eqY);ctx.stroke();
- return cv}
+ const tex=new THREE.CanvasTexture(cv);return tex}
+const MAP_GLOBE={renderer:null,scene:null,camera:null,group:null,raf:null,container:null,autoSpin:true,dist:255,rot:{y:.4,x:-.15}};
+function globeLL(lat,lon,r){const la=lat*Math.PI/180,lo=lon*Math.PI/180;return new THREE.Vector3(r*Math.cos(la)*Math.cos(lo),r*Math.sin(la),-r*Math.cos(la)*Math.sin(lo))}
 function globeArc(group,a,b,color){
  const n=36,pts=[];for(let i=0;i<=n;i++){const f=i/n,[lat,lon]=gcPoint(a,b,f),bulge=16*Math.sin(f*Math.PI);pts.push(globeLL(lat,lon,101+bulge))}
  const curve=new THREE.CatmullRomCurve3(pts),geo=new THREE.TubeGeometry(curve,48,.55,6,false);
  group.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color})))}
 function globeDot(group,lat,lon,color,size=1.5){
- const mesh=new THREE.Mesh(new THREE.SphereGeometry(size,10,10),new THREE.MeshBasicMaterial({color}));mesh.position.copy(globeLL(lat,lon,101));group.add(mesh);return mesh}
+ const mesh=new THREE.Mesh(new THREE.SphereGeometry(size,12,12),new THREE.MeshBasicMaterial({color}));mesh.position.copy(globeLL(lat,lon,101));group.add(mesh);return mesh}
 function globeMarkers(group){
  if(typeof mapData!=='function')return;const {groups,flying}=mapData();
  for(const icao of Object.keys(groups)){const ll=apLL(icao);if(!ll)continue;globeDot(group,ll[0],ll[1],0xffb400,1.3+Math.min(2,Math.sqrt(groups[icao].length)*.4))}
  for(const r of flying){const a=apLL(r.dep),b=apLL(r.arr);if(!a||!b)continue;globeArc(group,a,b,0x4fc3f7);
   const f=Math.min(1,Math.max(0,(Date.now()-r.start)/(r.end-r.start))),[lat,lon]=gcPoint(a,b,f);globeDot(group,lat,lon,0xffffff,1.9)}
 }
+/* Brilho atmosférico (Fresnel) na borda do globo, como num render realista — truque clássico do three.js. */
+function globeAtmosphere(radius){
+ const material=new THREE.ShaderMaterial({
+  uniforms:{},
+  vertexShader:`varying vec3 vNormal;void main(){vNormal=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+  fragmentShader:`varying vec3 vNormal;void main(){float intensity=pow(0.68-dot(vNormal,vec3(0.0,0.0,1.0)),3.2);gl_FragColor=vec4(0.42,0.68,1.0,1.0)*intensity;}`,
+  blending:THREE.AdditiveBlending,side:THREE.BackSide,transparent:true,depthWrite:false});
+ return new THREE.Mesh(new THREE.SphereGeometry(radius,48,48),material)}
 function globeBind(container){
  const G=MAP_GLOBE;let down=false,lx=0,ly=0,moved=false;
  G._pd=e=>{down=true;moved=false;G.autoSpin=false;lx=e.clientX;ly=e.clientY};
  G._pm=e=>{if(!down||!G.group)return;const dx=e.clientX-lx,dy=e.clientY-ly;if(Math.abs(dx)+Math.abs(dy)>2)moved=true;lx=e.clientX;ly=e.clientY;
   G.rot.y+=dx*0.006;G.rot.x=Math.max(-1.3,Math.min(1.3,G.rot.x+dy*0.006));G.group.rotation.y=G.rot.y;G.group.rotation.x=G.rot.x};
  G._pu=()=>{down=false;setTimeout(()=>{if(!moved)G.autoSpin=true},2500)};
- G._wh=e=>{e.preventDefault();G.dist=Math.max(140,Math.min(420,G.dist+e.deltaY*0.2));if(G.camera){G.camera.position.setLength(G.dist)}};
+ G._wh=e=>{e.preventDefault();G.dist=Math.max(130,Math.min(420,G.dist+e.deltaY*0.2));if(G.camera){G.camera.position.setLength(G.dist)}};
  container.addEventListener('pointerdown',G._pd);container.addEventListener('pointermove',G._pm);
  container.addEventListener('pointerup',G._pu);container.addEventListener('pointerleave',G._pu);
  container.addEventListener('wheel',G._wh,{passive:false})}
@@ -65,16 +83,20 @@ async function mapGlobeInit(container){
  if(!container.isConnected)return;mapGlobeDestroy();const G=MAP_GLOBE;
  const w=container.clientWidth||300,h=container.clientHeight||300;
  let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true})}catch(e){container.innerHTML=`<p class="hint" style="padding:16px">${esc(globeT('err'))}</p>`;return}
+ if('outputEncoding' in renderer)renderer.outputEncoding=THREE.sRGBEncoding;
  renderer.setSize(w,h);renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
  container.innerHTML='';container.appendChild(renderer.domElement);
  const scene=new THREE.Scene();
  const camera=new THREE.PerspectiveCamera(45,w/h,.1,1000);camera.position.set(0,0,G.dist);
- scene.add(new THREE.AmbientLight(0xffffff,.6));
- const sun=new THREE.DirectionalLight(0xffffff,.85);sun.position.set(220,160,220);scene.add(sun);
+ scene.add(new THREE.AmbientLight(0xffffff,.72));
+ const sun=new THREE.DirectionalLight(0xffffff,.95);sun.position.set(220,160,220);scene.add(sun);
+ const fill=new THREE.DirectionalLight(0xbcd6ff,.22);fill.position.set(-200,-80,-160);scene.add(fill);
  const group=new THREE.Group();group.rotation.y=G.rot.y;group.rotation.x=G.rot.x;scene.add(group);
- const tex=new THREE.CanvasTexture(globeTexture());
- group.add(new THREE.Mesh(new THREE.SphereGeometry(100,64,64),new THREE.MeshPhongMaterial({map:tex,shininess:5})));
- group.add(new THREE.Mesh(new THREE.SphereGeometry(104,48,48),new THREE.MeshBasicMaterial({color:0x4fb3e8,transparent:true,opacity:.07,side:THREE.BackSide})));
+ let tex;try{tex=await loadGlobeTexture()}catch(e){tex=globeFallbackTexture()}
+ if(!container.isConnected)return; /* a tela pode ter mudado enquanto a textura carregava */
+ const earth=new THREE.Mesh(new THREE.SphereGeometry(100,96,96),new THREE.MeshPhongMaterial({map:tex,shininess:11,specular:0x1b2c3d}));
+ group.add(earth);
+ group.add(globeAtmosphere(103));
  globeMarkers(group);
  G.renderer=renderer;G.scene=scene;G.camera=camera;G.group=group;G.container=container;
  globeBind(container);
