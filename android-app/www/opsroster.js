@@ -24,13 +24,17 @@ function opsRosterPaint(){
  const state=OPS_ROSTER_UI;
  if(state.roster!==RS.roster){state.stage=RS.roster?'review':'config';state.leg=0;state.roster=RS.roster}
  pane.querySelector('.rs-screen-head')?.remove();
- let tabs=pane.querySelector('.ops-roster-tabs');
- if(!tabs){tabs=document.createElement('nav');tabs.className='ops-roster-tabs';pane.prepend(tabs)}
- const html=['config','extras','review'].map(key=>`<button type="button" class="btn small" data-ops-stage="${key}" aria-pressed="${state.stage===key}">${esc(opsRosterText(key))}</button>`).join('');
- if(tabs.innerHTML!==html)tabs.innerHTML=html;
+ pane.querySelector('.ops-roster-tabs')?.remove();   /* abas Configurar/Complementos/Revisar removidas: segue o estado da escala */
  pane.dataset.stage=state.stage;
+ /* ao apresentar a escala, um botão volta ao formulário (mantém o que já foi preenchido) */
+ let back=pane.querySelector('.ops-roster-back');
+ if(RS.roster){
+   if(!back){back=document.createElement('button');back.type='button';back.className='btn small ops-roster-back';back.dataset.opsBack='1';pane.prepend(back)}
+   const bt=['New schedule','Nova escala','Nuevo horario','Nouveau planning','Neue Flugfolge','新しいスケジュール','新排班','새 스케줄'][LANGS.indexOf(lang)]||'New schedule';
+   back.textContent='← '+bt;
+ }else if(back){back.remove()}
  let unavailable=pane.querySelector('.ops-roster-unavailable');
- if(!unavailable){unavailable=document.createElement('div');unavailable.className='notice ops-roster-unavailable';tabs.after(unavailable)}
+ if(!unavailable){unavailable=document.createElement('div');unavailable.className='notice ops-roster-unavailable';pane.prepend(unavailable)}
  unavailable.hidden=!RS.opsNoRpl||!!RS.roster||state.stage!=='config';
  if(!unavailable.hidden){
   const al=typeof opsRosterAirline==='function'?opsRosterAirline():'';
@@ -80,9 +84,9 @@ function opsRosterPaint(){
 }
 document.addEventListener('click',event=>{
  if(event.target.closest('[data-action="rs-other"][data-v="1"]'))RS.opsNoRpl=false;
- const button=event.target.closest('[data-ops-stage],[data-ops-leg]');
+ if(event.target.closest('[data-ops-back]')&&view==='roster'){RS.roster=null;if(typeof rsSave==='function')rsSave();render();return}
+ const button=event.target.closest('[data-ops-leg]');
  if(!button||view!=='roster')return;
- if(button.dataset.opsStage)OPS_ROSTER_UI.stage=button.dataset.opsStage;
- else OPS_ROSTER_UI.leg+=Number(button.dataset.opsLeg);
+ OPS_ROSTER_UI.leg+=Number(button.dataset.opsLeg);
  opsRosterPaint();
 });

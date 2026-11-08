@@ -32,11 +32,14 @@
 .op-roster .notice{font-size:12px;padding:6px}
 .op-roster .rs-accept{display:flex;flex-wrap:wrap;gap:6px}
 .op-roster .ops-roster-extras{grid-column:1/-1;min-width:0}
-.op-roster[data-stage=extras] .rs-grid{grid-template-columns:minmax(0,1fr)!important}
-.op-roster[data-stage=config] .ops-roster-extras,.op-roster[data-stage=config] .rs-out,
-.op-roster[data-stage=extras] .rs-mode-field,.op-roster[data-stage=extras] .rs-sidebar-main,
-.op-roster[data-stage=extras] .rs-layout-sidebar,.op-roster[data-stage=extras] .rs-out,
+.op-roster[data-stage=config] .rs-out,
 .op-roster[data-stage=review] .rs-form-screen{display:none!important}
+/* ao gerar, a escala "vira" e ocupa a tela */
+.op-roster[data-stage=review] .rs-out{animation:ops-flip .55s cubic-bezier(.4,0,.2,1) both;transform-origin:top center}
+@keyframes ops-flip{from{opacity:0;transform:perspective(1400px) rotateX(-32deg);filter:blur(1px)}to{opacity:1;transform:none;filter:none}}
+@media (prefers-reduced-motion:reduce){.op-roster[data-stage=review] .rs-out{animation:none}}
+/* botão "← Nova escala" no topo da apresentação */
+.op-roster .ops-roster-back{align-self:flex-start;margin:0 0 10px}
 .op-roster .rs-liv{display:block!important}
 /* The airport header is moved outside the form by scMoveDep. Keep one grid,
    rather than nesting the generator inside the header's former main column. */
