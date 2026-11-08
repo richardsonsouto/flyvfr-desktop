@@ -143,10 +143,12 @@
  function efRplFlights(dep){
    if(!SCHED||!SCHED.idx||!AIRPORTS||!AIRPORTS[dep])return[];
    const names=typeof ICAO_AL==="function"?ICAO_AL():{},inFleet=new Set(fleet.map(a=>a.airline));
+   const sel=(typeof ACP!=="undefined"&&ACP.rs&&ACP.rs.al)||"all";   /* companhia escolhida no passo 3 */
    const now=Date.now(),t0=now-5*6e4,t1=now+6*36e5,out=[];
    for(const code in SCHED.idx){if(!(SCHED.idx[code]||{})[dep])continue;
      const al=Object.keys(AIRLINE_ICAO||{}).find(n=>AIRLINE_ICAO[n]===code&&inFleet.has(n))||(inFleet.has(names[code])?names[code]:null);
      if(!al)continue;
+     if(sel!=="all"&&al!==sel)continue;   /* só as saídas da companhia escolhida (todas quando "Todas") */
      const iata=(typeof AIRLINE_IATA!=="undefined"&&AIRLINE_IATA[al])||code;
      for(const f of realDeps(code,dep,t0,t1))out.push({al,code,iata,f})}
    return out.sort((a,b)=>a.f.std-b.f.std)}
@@ -174,7 +176,7 @@
    const html=rplListHTML();
    if(!html){if(el)el.remove();return}
    if(!el){el=document.createElement("div");el.className="ef-rpl-list";ll.appendChild(el)}
-   const sig=html.length+"|"+(RS.pf?pfKey(RS.pf):"");
+   const sig=html.length+"|"+(RS.pf?pfKey(RS.pf):"")+"|"+((typeof ACP!=="undefined"&&ACP.rs&&ACP.rs.al)||"");
    if(el.dataset.sig!==sig){el.dataset.sig=sig;el.innerHTML=html}}
 
  /* ── prévia da escala (rodapé): rota, modo, 1ª saída, duração, voos/dia e total estimado ── */
