@@ -263,7 +263,7 @@ setInterval(()=>{if(session)paintBell()},60e3);
 /* =====================================================================
    6. Mapa da frota (Leaflet + mapa da CARTO/OpenStreetMap)
    ===================================================================== */
-let leafletP=null,MAPV={map:null,center:null,zoom:null,airline:"all"};
+let leafletP=null,MAPV={map:null,center:null,zoom:null,airline:"all",view3d:false};
 function loadLeaflet(){if(window.L)return Promise.resolve();if(leafletP)return leafletP;
   leafletP=new Promise((ok,no)=>{const css=document.createElement("link");css.rel="stylesheet";css.href="vendor/leaflet/leaflet.css";document.head.appendChild(css);
     const s=document.createElement("script");s.src="vendor/leaflet/leaflet.js";s.onload=()=>ok();s.onerror=()=>{leafletP=null;no(new Error("leaflet"))};document.head.appendChild(s)});
@@ -283,9 +283,10 @@ function mapData(){
 }
 function viewMap(){
   if(!db||!loaded.aircraft)return offline();
-  return`<section class="map-screen"><div class="sec-head map-screen-toolbar"><h2>${t("map_title")}</h2><span class="map-chart-summary" id="map-chart-summary">${esc(typeof usChartT==='function'?(US_CHARTS[MAP_CHARTS.mode]?usChartT(MAP_CHARTS.mode):chartT(MAP_CHARTS.mode)):'')}</span>${alPickHTML("map",MAPV.airline)}<button type="button" class="btn map-charts-toggle" data-action="map-charts-toggle" aria-controls="map-charts-panel" aria-expanded="false">${NAV_ICON.manual}<span>${t('map_charts_button')}</span></button></div>
+  return`<section class="map-screen"><div class="sec-head map-screen-toolbar"><h2>${t("map_title")}</h2><span class="map-chart-summary" id="map-chart-summary">${esc(typeof usChartT==='function'?(US_CHARTS[MAP_CHARTS.mode]?usChartT(MAP_CHARTS.mode):chartT(MAP_CHARTS.mode)):'')}</span>${alPickHTML("map",MAPV.airline)}<button type="button" class="btn map-globe-toggle" data-action="map-globe-toggle" aria-pressed="${MAPV.view3d?'true':'false'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M4.5 7.5h15M4.5 16.5h15"/></svg><span>${esc(typeof globeT==='function'?globeT(MAPV.view3d?'to2d':'to3d'):'')}</span></button><button type="button" class="btn map-charts-toggle" data-action="map-charts-toggle" aria-controls="map-charts-panel" aria-expanded="false">${NAV_ICON.manual}<span>${t('map_charts_button')}</span></button></div>
    ${typeof mapToolsHTML==="function"?mapToolsHTML():""}${typeof mapChartsHTML==="function"?mapChartsHTML():""}
-   <div class="map-wrap"><div id="fleet-map" class="fleet-map" role="region" aria-label="${t("map_title")}"><div class="map-loading">${t("map_loading")}</div></div>
+   <div class="map-wrap"><div id="fleet-map" class="fleet-map" role="region" aria-label="${t("map_title")}" ${MAPV.view3d?'hidden':''}><div class="map-loading">${t("map_loading")}</div></div>
+    <div id="fleet-globe" class="fleet-globe" role="region" aria-label="${t("map_title")}" ${MAPV.view3d?'':'hidden'}></div>
     <details class="panel map-side"><summary>${t("map_live_h")}</summary><div id="map-live">${typeof liveListHTML==="function"?liveListHTML():""}</div></details>
     <p class="hint" id="net-map-status" aria-live="polite"></p></div></section>`;
 }
@@ -345,6 +346,11 @@ async function initMap(){
   if(typeof mapRadarInit==="function"&&el.isConnected&&MAPV.map===m)mapRadarInit(m,Lf);
   if(typeof mapChartsInit==="function"&&el.isConnected&&MAPV.map===m)await mapChartsInit(m,Lf);
   if(typeof netMapInit==='function'&&el.isConnected&&MAPV.map===m&&MAPV.control)netMapInit(m,Lf,MAPV.control);
+  const globeEl=$("#fleet-globe");
+  if(globeEl){
+    if(MAPV.view3d){el.hidden=true;globeEl.hidden=false;if(typeof mapGlobeInit==="function")mapGlobeInit(globeEl);}
+    else{globeEl.hidden=true;el.hidden=false;if(typeof mapGlobeDestroy==="function")mapGlobeDestroy();}
+  }
   setTimeout(()=>m.invalidateSize(),60);
 }
 document.addEventListener("change",e=>{if(e.target.id==="map-al"){MAPV.airline=e.target.value;render()}});

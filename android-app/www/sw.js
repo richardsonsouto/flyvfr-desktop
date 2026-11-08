@@ -1,6 +1,6 @@
 // Service worker: deixa o app abrir rápido e funcionar sem internet (somente leitura).
 // Ao publicar uma nova versão do app, aumente o número abaixo.
-const VERSION = "vfr-v644";
+const VERSION = "vfr-v645";
 const SHELL = ["pilot-tools.js",
  "socialauth.js", "socialauth.css",
  "pilotavatar.js", "pilotavatar.css",
@@ -10,7 +10,7 @@ const SHELL = ["pilot-tools.js",
  
   "radar3d.js", "radar3d.css",
   "./", "img/navigraph.png", "img/manufacturers/boeing.svg", "img/manufacturers/airbus.svg", "img/manufacturers/bombardier.svg", "index.html", "styles.css", "extras.css", "freelance.css", "config.js", "i18n.js", "app.js", "features.js", "networks.js", "flightinfo.js", "roster.js", "freelance.js", "fleetview.js", "manualupd.js", "manual-i18n.js", "catalogview.js", "brieflayers.js", "favairline.js", "manualreview.js", "manualupd2.js", "manualupd3.js", "vfr-ui.js", "img/regions.json", "programming.js", "pay.js", "track.js", "livemap.js", "wxdecode.js", "metarvisual.js", "tafvisual.js", "routecapture.js", "briefdispatch.js", "briefextras.js", "briefcharts.js", "chartnotams.js", "mapchartnotams.js", "vendor/pdf-lib.min.js", "vendor/pdfjs/pdf.mjs", "vendor/pdfjs/pdf.worker.mjs", "briefing.js", "brieflayout.js", "briefalternate.js", "notamtranslate.js", "adsb.js", "landing.js", "airports.json", "liveries.json", "roster-ap.json", "manifest.webmanifest",
-  "aerodrome-surface.js", "adc/sbgr/catalogue.json", "adc/sbgr/chart.png", "mapdispatch.js", "img/brand/flightsim-to.png", "img/brand/x-plane-org.jpg", "simicons.js", "img/sim/msfs.png", "img/sim/xplane.svg", "img/sim/p3d.png", "reportguard.js", "maptools.js", "runways.json", "rwyends.json", "mapradar.js", "mapcharts-us.js", "mapcharts.js", "charts-br.json", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",
+  "aerodrome-surface.js", "adc/sbgr/catalogue.json", "adc/sbgr/chart.png", "mapdispatch.js", "img/brand/flightsim-to.png", "img/brand/x-plane-org.jpg", "simicons.js", "img/sim/msfs.png", "img/sim/xplane.svg", "img/sim/p3d.png", "reportguard.js", "maptools.js", "runways.json", "rwyends.json", "mapradar.js", "mapglobe.js", "mapcharts-us.js", "mapcharts.js", "charts-br.json", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js",
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/591.supabase.js"
 ];
