@@ -174,7 +174,7 @@
 .hm-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px}.hm-h h3{margin:0;font:700 1.25rem var(--f-display)}.hm-h .linkish{font-size:.8rem;white-space:nowrap}
 .hm-next{padding:0;overflow:hidden}
 .hm-band{display:flex;align-items:center;gap:14px;padding:16px 20px}
-.hm-al{width:44px;height:44px;border-radius:10px;background:#fff;display:grid;place-items:center;flex:none;font:700 .9rem var(--f-mono);color:#13202E;overflow:hidden}.hm-al img{max-width:34px;max-height:34px}
+.hm-al{width:60px;height:60px;border-radius:14px;background:#fff;display:grid;place-items:center;flex:none;font:700 1.05rem var(--f-mono);color:#13202E;overflow:hidden}.hm-al img,.hm-al .al-sym{width:46px;height:46px;max-width:46px;max-height:46px;margin:0;object-fit:contain}
 .hm-bt{min-width:0}.hm-k{display:block;font:600 .78rem var(--f-display);letter-spacing:.14em;text-transform:uppercase;opacity:.85}.hm-bt b{font:700 1.4rem var(--f-display);display:block;line-height:1.1}
 .hm-cd{margin-left:auto;text-align:right}.hm-cd b{font-size:2rem;line-height:1;display:block}.hm-cd small{font-size:.74rem;opacity:.9}
 .hm-route{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:18px 20px 6px}
