@@ -414,9 +414,10 @@ function rsSoonFlights(dep){
     for(const f of realDeps(code,dep,t0,t1)){if(rsPfAircraft({al,f}).length)out.push({al,code,f})}}
   return out.sort((a,b)=>a.f.std-b.f.std||a.al.localeCompare(b.al))}
 /* Aeronaves sem histórico podem iniciar no RPL. Quando já há posição registrada,
-   somente as que estão no aeroporto de partida ficam disponíveis. Sem modelo no RPL,
-   não é seguro oferecer nenhuma aeronave como compatível. */
-function rsPfAircraft(pf){if(!pf||!pf.f||!pf.f.typ||!RS_FAM[pf.f.typ])return[];const now=Date.now(),nm=rsNm(pf.f.dep,pf.f.arr);
+   somente as que estão no aeroporto de partida ficam disponíveis. Com modelo no RPL,
+   só a mesma família serve; sem modelo (grade ANAC/VRA), vale pelo alcance — mesmo
+   critério já usado no restante do montador de escala (rsRealOk/rsRealFits). */
+function rsPfAircraft(pf){if(!pf||!pf.f)return[];const now=Date.now(),nm=rsNm(pf.f.dep,pf.f.arr);
   return fleet.filter(a=>{const at=locAt(a.id,pf.f.std),p=rsProfile(a);return a.airline===pf.al&&(!at||at===pf.f.dep)&&rsRealOk(p,a,pf.f)&&nm<=p.range&&!movingNow(a.id)&&statusOf(a.id).key!=="bad"
     &&!data.reservations.some(r=>r.aircraftId===a.id&&booked(r)&&r.end>now)})}
 /* Aeródromo coberto pelo RPL: só os registros que trazem modelo RPL contam aqui.
