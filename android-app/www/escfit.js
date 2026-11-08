@@ -26,6 +26,11 @@
  /* ── unfit: desfaz tudo, volta ao layout padrão ── */
  function unfit(v){
    v.classList.remove("ef");
+   /* desfaz os wrappers de 2 colunas (devolve os nós ao form) */
+   const main=v.querySelector(".ef-main");
+   if(main){while(main.firstChild)main.before(main.firstChild);main.remove()}
+   const aside=v.querySelector(".ef-aside");
+   if(aside){while(aside.firstChild)aside.before(aside.firstChild);aside.remove()}
    /* verso */
    v.querySelectorAll(".ef-days").forEach(x=>x.remove());
    v.querySelectorAll(".ef-row,.ef-acc,.ef-foot").forEach(w=>{while(w.firstChild)w.before(w.firstChild);w.remove()});
@@ -108,8 +113,27 @@
    /* ── lista RPL (col 1) ── */
    updateRplList(v);
 
-   /* ── barra de resumo (rodapé) ── */
+   /* ── prévia da escala ── */
    updateSummary(v,form);
+
+   /* ── 2 colunas: passos (.ef-main) à esquerda, "quando"+prévia (.ef-aside) à direita ── */
+   if(!RS.roster){
+     const sidebar=form.querySelector(".rs-layout-sidebar"),summ=form.querySelector(".ef-summary");
+     /* aside direito */
+     if(sidebar&&summ){
+       let aside=form.querySelector(".ef-aside");
+       if(!aside){aside=document.createElement("div");aside.className="ef-aside";form.appendChild(aside)}
+       if(sidebar.parentElement!==aside)aside.appendChild(sidebar);
+       if(summ.parentElement!==aside)aside.appendChild(summ);
+       /* main esquerdo: todos os passos empilhados, na ordem */
+       let main=form.querySelector(".ef-main");
+       if(!main){main=document.createElement("div");main.className="ef-main";form.prepend(main)}
+       [".rs-top-moved",".rs-mode-field",".rs-rpl-intro",".rs-layout-left",".rs-layout-right"].forEach(sel=>{
+         const el=form.querySelector(sel);if(el&&el.parentElement!==main)main.appendChild(el);
+       });
+       if(main.nextElementSibling!==aside)form.appendChild(aside);  /* aside sempre depois do main */
+     }
+   }
 
    /* ── verso: um dia por vez ── */
    handleOutput(v);
@@ -223,10 +247,16 @@
    let pop=document.getElementById("ef-liv-pop");if(!EF.liv||!bt||!src||!bt.offsetParent){pop&&pop.remove();return}
    if(!pop){pop=document.createElement("div");pop.id="ef-liv-pop";pop.className="ef-liv-pop";document.body.appendChild(pop)}
    if(pop.dataset.h!==src.innerHTML){pop.dataset.h=src.innerHTML;pop.innerHTML=src.innerHTML}
-   const r=bt.getBoundingClientRect(),M=12,w=Math.min(640,innerWidth-2*M),below=innerHeight-r.bottom-M-6,above=r.top-M-6,down=below>=260||below>=above;
+   const r=bt.getBoundingClientRect(),M=12,w=Math.min(640,innerWidth-2*M);
    pop.style.width=w+"px";pop.style.left=Math.max(M,Math.min(innerWidth-w-M,r.right-w))+"px";
-   if(down){const t=r.bottom+6;pop.style.top=t+"px";pop.style.bottom="auto";pop.style.maxHeight=Math.max(0,Math.min(420,innerHeight-t-M))+"px"}
-   else{const b=innerHeight-r.top+6;pop.style.bottom=b+"px";pop.style.top="auto";pop.style.maxHeight=Math.max(0,Math.min(420,innerHeight-b-M))+"px"}}
+   const maxH=Math.max(120,Math.min(420,innerHeight-2*M));
+   pop.style.maxHeight=maxH+"px";pop.style.bottom="auto";
+   const h=Math.min(maxH,pop.offsetHeight||maxH);
+   /* abaixo do botão se couber; senão acima; sempre preso dentro da janela (o botão pode estar fora da tela) */
+   let top=r.bottom+6;
+   if(top+h>innerHeight-M)top=r.top-6-h;
+   top=Math.max(M,Math.min(top,innerHeight-M-h));
+   pop.style.top=top+"px"}
 
  /* ── observers ── */
  let raf=0;const kick=()=>{if(raf)return;raf=requestAnimationFrame(()=>{raf=0;try{fit();squeeze()}catch(e){console.warn("ef",e)}})};
@@ -269,62 +299,52 @@
 #view.ef>.rs-screen-head{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 #view.ef .rs-form-screen{padding:12px 14px;gap:8px}
 
-/* form vira grid de 3 colunas; intermediários viram display:contents */
-#view.ef .rs-sidebar-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 280px!important;gap:10px 14px!important}
+/* form vira grid de 2 colunas: passos (.ef-main, esq) + "quando"/prévia (.ef-aside, dir) */
+#view.ef .rs-sidebar-grid{display:grid!important;grid-template-columns:minmax(0,1fr) 344px!important;gap:16px!important;align-items:start}
 #view.ef .rs-sidebar-main{display:contents}
 #view.ef .rs-main-fields{display:contents!important}
 
-/* col 1: origem, modo, flight picker, lista RPL */
-#view.ef .rs-top-moved,
-#view.ef .rs-mode-field,
-#view.ef .rs-rpl-intro,
-#view.ef .rs-layout-left{grid-column:1}
-#view.ef .rs-layout-left{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden}
+/* coluna esquerda: passos empilhados */
+#view.ef .ef-main{grid-column:1;grid-row:1;min-width:0;display:flex;flex-direction:column;gap:14px}
+#view.ef .ef-main>.rs-top-moved,
+#view.ef .ef-main>.rs-mode-field,
+#view.ef .ef-main>.rs-rpl-intro{margin:0}
+#view.ef .rs-layout-left{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}
+#view.ef .rs-layout-right{display:flex!important;flex-direction:column;gap:10px;min-width:0;border:0!important;padding:0!important;background:none!important}
 
-/* col 2: aeronave, foto, pinturas */
-#view.ef .rs-layout-right{grid-column:2;grid-row:1/span 20;display:flex!important;flex-direction:column;gap:10px;min-width:0;border:0!important;padding:0!important;background:none!important}
+/* coluna direita: aside grudado com "quando voar" + prévia */
+#view.ef .ef-aside{grid-column:2;grid-row:1;align-self:start;position:sticky;top:12px;
+  display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 24px);overflow:auto;scrollbar-width:thin}
+#view.ef .ef-aside .rs-layout-sidebar{margin:0}
+/* no desktop o Gerar vem da prévia; esconder o duplicado da sidebar */
+#view.ef .ef-aside .rs-actions button[type=submit]{display:none}
+#view.ef .ef-aside .rs-actions{justify-content:flex-start;gap:6px}
 
-/* col 3: sidebar */
-#view.ef .rs-layout-sidebar{grid-column:3;grid-row:1/span 20;align-self:start}
-
-/* ocultar dep-info (redundante com a lista RPL) */
 #view.ef #rs-dep-info{display:none}
-
-/* ADS-B + regras: esconder no layout combinado */
 #view.ef #rs-ground{display:none}
 #view.ef .rs-form-screen>.rs-rules{display:none}
-
-/* footer com ADS-B + rules (quando existir) */
-#view.ef .ef-foot{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;grid-column:1/-1}
+#view.ef .ef-foot{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;grid-column:1}
 #view.ef .ef-foot>*{margin:0}
 
-/* ── prévia da escala (rodapé) ── */
-#view.ef .ef-summary{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:8px 16px;padding:10px 16px;background:var(--sunk);border:1px solid var(--line);border-radius:10px}
-#view.ef .ef-pv-head{grid-column:1;display:flex;flex-direction:column;gap:2px;padding-right:12px;border-right:1px solid var(--line)}
-#view.ef .ef-pv-ttl{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+/* ── prévia da escala (vertical, na coluna direita) ── */
+#view.ef .ef-summary{display:flex;flex-direction:column;gap:11px;padding:14px;background:var(--sunk);border:1px solid var(--line);border-radius:10px}
+#view.ef .ef-pv-head{display:flex;align-items:center;justify-content:space-between}
+#view.ef .ef-pv-ttl{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
 #view.ef .ef-pv-live{color:var(--ok);font-size:.7rem;line-height:1}
-#view.ef .ef-pv-route{grid-column:2;display:flex;align-items:center;gap:7px;font-weight:700;font-size:1.05rem;min-width:0}
-#view.ef .ef-pv-route .al-sym{width:20px;height:20px;flex:none}
+#view.ef .ef-pv-route{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1.3rem;min-width:0}
+#view.ef .ef-pv-route .al-sym{width:22px;height:22px;flex:none}
 #view.ef .ef-pv-route .ef-pv-arr{color:var(--accent)}
 #view.ef .ef-pv-route>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#view.ef .ef-pv-cells{grid-column:1/3;grid-row:2;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
+#view.ef .ef-pv-cells{display:grid;grid-template-columns:1fr 1fr;gap:9px 12px}
 #view.ef .ef-pv-c{display:flex;flex-direction:column;gap:1px;min-width:0}
-#view.ef .ef-pv-c>i{font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;font-style:normal}
-#view.ef .ef-pv-c>b{font-size:.82rem;font-weight:600}
+#view.ef .ef-pv-c>i{font-size:.58rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;font-style:normal}
+#view.ef .ef-pv-c>b{font-size:.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #view.ef .ef-pv-c>b small{color:var(--muted);font-weight:400}
-#view.ef .ef-pv-total{grid-column:3;grid-row:1/span 2;align-self:center;display:flex;flex-direction:column;gap:1px;text-align:right;background:var(--plate);color:var(--plate-ink);border-radius:8px;padding:8px 14px}
+#view.ef .ef-pv-total{display:flex;align-items:baseline;justify-content:space-between;background:var(--plate);color:var(--plate-ink);border-radius:8px;padding:10px 14px;margin-top:2px}
 #view.ef .ef-pv-total>i{font-size:.6rem;letter-spacing:.07em;text-transform:uppercase;opacity:.8;font-weight:600;font-style:normal}
-#view.ef .ef-pv-total>b{font-size:1.25rem;font-weight:700;line-height:1.05}
-#view.ef .ef-pv-total>b small{font-size:.62rem;opacity:.8;font-weight:500}
-#view.ef .ef-sum-btn{grid-column:4;grid-row:1/span 2;align-self:center;min-height:42px;padding:8px 22px;font-weight:700}
-@media (max-width:860px){
-#view.ef .ef-summary{grid-template-columns:1fr auto}
-#view.ef .ef-pv-head{grid-column:1/-1;flex-direction:row;align-items:center;gap:6px;border-right:0;border-bottom:1px solid var(--line);padding:0 0 6px}
-#view.ef .ef-pv-route{grid-column:1/-1}
-#view.ef .ef-pv-cells{grid-column:1/-1;grid-row:auto}
-#view.ef .ef-pv-total{grid-column:1;grid-row:auto;flex-direction:row;align-items:baseline;gap:8px;text-align:left}
-#view.ef .ef-sum-btn{grid-column:2;grid-row:auto}
-}
+#view.ef .ef-pv-total>b{font-size:1.5rem;font-weight:700;line-height:1}
+#view.ef .ef-pv-total>b small{font-size:.6rem;opacity:.8;font-weight:500}
+#view.ef .ef-sum-btn{width:100%;min-height:46px;padding:10px;font-weight:700;font-size:1.05rem}
 
 /* ── lista RPL ── */
 #view.ef .ef-rpl-list{flex:1;min-height:0;display:flex;flex-direction:column;gap:4px}

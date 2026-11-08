@@ -72,7 +72,7 @@ function opsRosterPaint(){
  empty.textContent=t('rs_gen');
  /* passos guiados: numera os blocos (os eyebrows só aparecem no celular, via CSS) */
  if(state.stage==='config'&&!RS.roster){
-  ['.rs-top-moved','.rs-mode-field','.rs-sidebar-main','.rs-layout-sidebar'].forEach((sel,i)=>{
+  ['.rs-top-moved','.rs-mode-field','.rs-layout-left','.rs-layout-sidebar'].forEach((sel,i)=>{
    const el=pane.querySelector(sel);if(!el)return;const lab=opsStepText(i);
    if(el.dataset.step!==String(i+1)||el.dataset.eyebrow!==lab){el.dataset.step=String(i+1);el.dataset.eyebrow=lab}
   });
