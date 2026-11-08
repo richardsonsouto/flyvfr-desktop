@@ -1,6 +1,6 @@
 // Service worker: deixa o app abrir rápido e funcionar sem internet (somente leitura).
 // Ao publicar uma nova versão do app, aumente o número abaixo.
-const VERSION = "vfr-v651";
+const VERSION = "vfr-v652";
 const SHELL = ["pilot-tools.js",
  "socialauth.js", "socialauth.css",
  "pilotavatar.js", "pilotavatar.css",
@@ -16,7 +16,10 @@ const SHELL = ["pilot-tools.js",
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // Guarda cada arquivo individualmente: se um deles falhar (CDN fora do ar, instabilidade),
+  // os demais continuam sendo guardados em vez de a instalação inteira falhar (como acontecia
+  // com cache.addAll, que desiste de tudo se um único arquivo der erro).
+  e.waitUntil(caches.open(VERSION).then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));

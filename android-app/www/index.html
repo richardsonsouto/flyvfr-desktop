@@ -60,7 +60,11 @@
 <div id="sheet-root" hidden></div>
 <div id="toast" class="toast" hidden role="status"></div>
 
+<!-- Biblioteca do Supabase: se o CDN principal (jsDelivr) falhar (bloqueio de rede, extensão,
+     instabilidade), carrega de um espelho alternativo (unpkg), para não travar o app em
+     "App ainda não configurado" por causa só de uma CDN fora do ar. -->
 <script src="vendor/supabase/supabase.js"></script>
+<script>if(!window.supabase)document.write('<script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"><\/script>')</script>
 <script src="config.js?v=228"></script>
 <script src="i18n.js?v=505"></script>
 <script src="landing.js?v=585"></script>
