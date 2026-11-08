@@ -2,9 +2,10 @@
    NASA Blue Marble, domínio público), gira devagar sozinho, o piloto arrasta para girar manualmente
    (o giro automático volta depois de um tempo parado) e usa a roda do mouse / pinça para aproximar.
    Mostra a frota (por aeroporto), os voos em andamento (arco sobre a esfera), os aeroportos onde as
-   aeronaves estão agora, e o tráfego VATSIM/IVAO (mesmos dados do mapa 2D). Não é navegação: apenas
-   uma visualização decorativa/informativa. Se a imagem real não carregar (sem internet, CDN
-   bloqueado), cai para um globo estilizado desenhado localmente. */
+   aeronaves estão agora, e o tráfego VATSIM/IVAO (mesmos dados do mapa 2D). Tocar/clicar num ponto
+   mostra um balão com os dados, igual à dica do mapa 2D. Não é navegação: apenas uma visualização
+   decorativa/informativa. Se a imagem real não carregar (sem internet, CDN bloqueado), cai para um
+   globo estilizado desenhado localmente. */
 const GLOBE_WORDS={
  to3d:['3D globe','Globo 3D','Globo 3D','Globe 3D','3D-Globus','3D地球儀','3D地球','3D 지구본'],
  to2d:['2D map','Mapa 2D','Mapa 2D','Carte 2D','2D-Karte','2Dマップ','2D地图','2D 지도'],
@@ -67,13 +68,19 @@ function globeArc(group,a,b,color){
  const n=36,pts=[];for(let i=0;i<=n;i++){const f=i/n,[lat,lon]=gcPoint(a,b,f),bulge=16*Math.sin(f*Math.PI);pts.push(globeLL(lat,lon,101+bulge))}
  const curve=new THREE.CatmullRomCurve3(pts),geo=new THREE.TubeGeometry(curve,48,.55,6,false);
  group.add(new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color})))}
-function globeDot(group,lat,lon,color,size=1.5){
- const mesh=new THREE.Mesh(new THREE.SphereGeometry(size,12,12),new THREE.MeshBasicMaterial({color}));mesh.position.copy(globeLL(lat,lon,101));group.add(mesh);return mesh}
+function globeDot(group,lat,lon,color,size=1.5,info=null){
+ /* size maior só para facilitar o toque/clique (hit-test), sem mudar o tamanho visível do ponto */
+ const mesh=new THREE.Mesh(new THREE.SphereGeometry(size,12,12),new THREE.MeshBasicMaterial({color}));mesh.position.copy(globeLL(lat,lon,101));
+ if(info){const hit=new THREE.Mesh(new THREE.SphereGeometry(size+1.6,8,8),new THREE.MeshBasicMaterial({visible:false}));hit.userData=info;mesh.add(hit)}
+ group.add(mesh);return mesh}
 function globeMarkers(group){
  if(typeof mapData!=='function')return;const {groups,flying}=mapData();
- for(const icao of Object.keys(groups)){const ll=apLL(icao);if(!ll)continue;globeDot(group,ll[0],ll[1],0xffb400,1.3+Math.min(2,Math.sqrt(groups[icao].length)*.4))}
+ for(const icao of Object.keys(groups)){const ll=apLL(icao);if(!ll)continue;const list=groups[icao];
+  globeDot(group,ll[0],ll[1],0xffb400,1.3+Math.min(2,Math.sqrt(list.length)*.4),{kind:'airport',icao,n:list.length})}
  for(const r of flying){const a=apLL(r.dep),b=apLL(r.arr);if(!a||!b)continue;globeArc(group,a,b,0x4fc3f7);
-  const f=Math.min(1,Math.max(0,(Date.now()-r.start)/(r.end-r.start))),[lat,lon]=gcPoint(a,b,f);globeDot(group,lat,lon,0xffffff,1.9)}
+  const f=Math.min(1,Math.max(0,(Date.now()-r.start)/(r.end-r.start))),[lat,lon]=gcPoint(a,b,f);
+  const ac=typeof acById==='function'?acById(r.aircraftId):null;
+  globeDot(group,lat,lon,0xffffff,1.9,{kind:'flight',reg:ac?.registration||'',type:ac?icaoType(ac.type)||ac.type:'',dep:r.dep,arr:r.arr,flightNo:r.flightNo||''})}
 }
 /* Tráfego VATSIM/IVAO (mesmos dados já buscados pelo mapa 2D em MAPV.tfcData a cada 20s — aqui só
    redesenha os pontos sobre a esfera, sem nova busca na rede). O ADS-B real fica de fora do globo
@@ -87,7 +94,7 @@ function globeDrawTraffic(){
   if(p.net!=="VATSIM"&&p.net!=="IVAO")continue;
   if(re&&!re.test(String(p.cs||"").toUpperCase()))continue;
   if(typeof p.lat!=="number"||typeof p.lon!=="number")continue;
-  globeDot(G.tfcGroup,p.lat,p.lon,p.net==="VATSIM"?0x2dbe60:0x2e90fa,1.1)
+  globeDot(G.tfcGroup,p.lat,p.lon,p.net==="VATSIM"?0x2dbe60:0x2e90fa,1.1,{kind:'tfc',cs:p.cs,net:p.net,type:p.type,dep:p.dep,arr:p.arr,alt:p.alt,gs:p.gs,ground:p.ground})
  }
 }
 /* Brilho atmosférico (Fresnel) na borda do globo, como num render realista — truque clássico do three.js. */
@@ -98,6 +105,35 @@ function globeAtmosphere(radius){
   fragmentShader:`varying vec3 vNormal;void main(){float intensity=pow(0.68-dot(vNormal,vec3(0.0,0.0,1.0)),3.2);gl_FragColor=vec4(0.42,0.68,1.0,1.0)*intensity;}`,
   blending:THREE.AdditiveBlending,side:THREE.BackSide,transparent:true,depthWrite:false});
  return new THREE.Mesh(new THREE.SphereGeometry(radius,48,48),material)}
+/* Toque/clique num ponto (aeroporto da frota, voo em andamento, tráfego VATSIM/IVAO) mostra um
+   balão com os dados — a mesma informação que o mapa 2D mostra em dica/popup. */
+function globeTipText(info){
+ if(info.kind==='airport')return`${info.icao} · ${t(info.n===1?"map_ac_1":"map_ac_n",{n:info.n})}`;
+ if(info.kind==='flight')return`${info.reg||''} ${info.type||''}\n${info.dep} → ${info.arr}${info.flightNo?" · "+info.flightNo:""}`;
+ if(info.kind==='tfc'){
+  const alt=info.ground?t("brf_m_gnd"):"FL"+String(Math.round((info.alt||0)/100)).padStart(3,"0");
+  return`${info.cs} · ${info.net}\n${info.type||""}${(info.dep||info.arr)?` · ${info.dep||"?"} → ${info.arr||"?"}`:""}\n${alt}${info.gs?" · "+Math.round(info.gs)+" kt":""}`
+ }
+ return""}
+function globeShowTip(info,x,y){
+ const G=MAP_GLOBE;if(!G.container)return;
+ if(!G.tip){G.tip=document.createElement('div');G.tip.className='globe-tip';G.container.appendChild(G.tip)}
+ G.tip.textContent='';
+ for(const [i,ln] of globeTipText(info).split('\n').entries()){if(i)G.tip.appendChild(document.createElement('br'));G.tip.appendChild(document.createTextNode(ln))}
+ G.tip.style.left=Math.max(6,Math.min(x,(G.container.clientWidth||300)-170))+'px';
+ G.tip.style.top=Math.max(6,y-12)+'px';
+ G.tip.hidden=false;
+ clearTimeout(G._tipT);G._tipT=setTimeout(globeHideTip,6000)}
+function globeHideTip(){const G=MAP_GLOBE;if(G.tip)G.tip.hidden=true}
+function globeHandleTap(e){
+ const G=MAP_GLOBE;if(!G.renderer||!G.camera||!G.group||!G.container)return;
+ const rect=G.container.getBoundingClientRect();
+ const ndc={x:((e.clientX-rect.left)/rect.width)*2-1,y:-((e.clientY-rect.top)/rect.height)*2+1};
+ if(!G._ray)G._ray=new THREE.Raycaster();
+ G._ray.setFromCamera(ndc,G.camera);
+ const hit=G._ray.intersectObjects(G.group.children,true).find(h=>h.object.userData&&h.object.userData.kind);
+ if(!hit){globeHideTip();return}
+ globeShowTip(hit.object.userData,e.clientX-rect.left,e.clientY-rect.top)}
 function globeBind(container){
  const G=MAP_GLOBE;let down=false,lx=0,ly=0,moved=false;
  G._pd=e=>{down=true;moved=false;G.autoSpin=false;lx=e.clientX;ly=e.clientY};
@@ -106,7 +142,8 @@ function globeBind(container){
  /* Bug corrigido: antes, se o piloto arrastasse o globo (moved=true), o giro automático nunca mais
     voltava — só retomava depois de um toque sem arrastar. Agora sempre retoma depois de um tempo
     parado, maior se foi um arraste (deu tempo de olhar) e menor se foi só um toque. */
- G._pu=()=>{down=false;clearTimeout(G._spinT);G._spinT=setTimeout(()=>{G.autoSpin=true},moved?4000:600)};
+ G._pu=e=>{const wasMoved=moved;down=false;clearTimeout(G._spinT);G._spinT=setTimeout(()=>{G.autoSpin=true},wasMoved?4000:600);
+  if(!wasMoved&&e&&e.type==='pointerup')globeHandleTap(e);else globeHideTip()};
  G._wh=e=>{e.preventDefault();G.dist=Math.max(130,Math.min(420,G.dist+e.deltaY*0.2));if(G.camera){G.camera.position.setLength(G.dist)}};
  container.addEventListener('pointerdown',G._pd);container.addEventListener('pointermove',G._pm);
  container.addEventListener('pointerup',G._pu);container.addEventListener('pointerleave',G._pu);
@@ -117,10 +154,10 @@ function globeLoop(){const G=MAP_GLOBE;if(!G.renderer||!G.group)return;
  G.renderer.render(G.scene,G.camera);G.raf=requestAnimationFrame(globeLoop)}
 function mapGlobeDestroy(){const G=MAP_GLOBE;if(G.raf)cancelAnimationFrame(G.raf);
  if(G.tfcTimer)clearInterval(G.tfcTimer);
- clearTimeout(G._spinT);
+ clearTimeout(G._spinT);clearTimeout(G._tipT);
  if(G.container){for(const [ev,fn] of [['pointerdown',G._pd],['pointermove',G._pm],['pointerup',G._pu],['pointerleave',G._pu],['wheel',G._wh]])if(fn)G.container.removeEventListener(ev,fn)}
  G.ro?.disconnect();if(G.renderer){try{G.renderer.dispose()}catch(e){}try{G.renderer.domElement?.remove()}catch(e){}}
- Object.assign(G,{renderer:null,scene:null,camera:null,group:null,tfcGroup:null,raf:null,container:null,ro:null,tfcTimer:null})}
+ Object.assign(G,{renderer:null,scene:null,camera:null,group:null,tfcGroup:null,raf:null,container:null,ro:null,tfcTimer:null,tip:null})}
 async function mapGlobeInit(container){
  try{await loadThree()}catch(e){container.innerHTML=`<p class="hint" style="padding:16px">${esc(globeT('err'))}</p>`;return}
  if(!container.isConnected)return;mapGlobeDestroy();const G=MAP_GLOBE;
