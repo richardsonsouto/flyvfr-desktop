@@ -1,26 +1,37 @@
-/* Latest SimBrief dispatch is the source for map planning, never for accepted reservations. */
+/* The map only plots a SimBrief route for the pilot's own active, non-cancelled roster flight — never a bare SimBrief dispatch with no matching reservation. */
 const MAP_DISPATCH={owner:'',plan:null,error:'',busy:0,sequence:0,at:0};
 function mapDispatchText(key){const words={
  source:['Latest SimBrief dispatch','Último despacho do SimBrief','Último despacho de SimBrief','Dernier dispatch SimBrief','Letzter SimBrief-Dispatch','最新の SimBrief ディスパッチ','最新 SimBrief 签派','최신 SimBrief 디스패치'],
  missing:['Enter your SimBrief username or Pilot ID in Profile.','Informe seu usuário ou Pilot ID do SimBrief no Perfil.','Indica tu usuario o Pilot ID de SimBrief en el perfil.','Renseignez votre identifiant SimBrief dans le profil.','SimBrief-Benutzernamen oder Pilot-ID im Profil eintragen.','プロフィールに SimBrief ユーザー名または Pilot ID を入力してください。','请在个人资料填写 SimBrief 用户名或 Pilot ID。','프로필에 SimBrief 사용자 이름 또는 Pilot ID를 입력하세요.'],
+ noActive:['No active flight in your roster right now.','Nenhum voo ativo na sua escala no momento.','Ningún vuelo activo en tu programación ahora.','Aucun vol actif dans votre planning en ce moment.','Derzeit kein aktiver Flug in Ihrem Dienstplan.','現在、スケジュールにアクティブな便はありません。','您的排班中目前没有进行中的航班。','현재 스케줄에 진행 중인 비행이 없습니다.'],
  aircraft:['Dispatch aircraft is not in the fleet; no substitute selected.','A aeronave do despacho não está na frota; nenhuma substituta foi selecionada.','La aeronave del despacho no está en la flota; no se seleccionó sustituta.','Avion absent de la flotte ; aucun remplacement sélectionné.','Dispatch-Flugzeug nicht in der Flotte; kein Ersatz ausgewählt.','ディスパッチの機体はフリートにありません。代替機は選択していません。','签派飞机不在机队中，未自动选择替代飞机。','디스패치 항공기가 기단에 없어 대체 항공기는 선택하지 않았습니다.'],
  direct:['No detailed navlog available: the map connects departure and destination directly.','Sem navlog detalhado: o mapa liga diretamente a origem ao destino.','Sin navlog detallado: el mapa une origen y destino directamente.','Sans navlog détaillé : liaison directe entre départ et arrivée.','Kein detailliertes Navlog: direkte Verbindung von Start und Ziel.','詳細な航法ログがないため、出発地と目的地を直結して表示します。','没有详细导航日志，地图直接连接出发地和目的地。','상세 항법 로그가 없어 출발지와 도착지를 직선으로 연결합니다.'],
  automatic:['Updated when opening the map and checked every minute. Accepted rosters are not changed.','Atualizado ao abrir o mapa e consultado a cada minuto. A escala aceita não é alterada.','Se actualiza al abrir el mapa y se consulta cada minuto. No modifica la programación aceptada.','Actualisé à l’ouverture, puis vérifié chaque minute. Le planning accepté reste inchangé.','Beim Öffnen aktualisiert und jede Minute geprüft. Angenommene Dienstpläne bleiben unverändert.','マップを開いた時と毎分確認します。承認済みスケジュールは変更されません。','打开地图时更新，并每分钟检查。不会更改已接受的排班。','지도를 열 때 갱신하고 매분 확인합니다. 수락한 스케줄은 변경되지 않습니다.']
  };return words[key]?.[LANGS.indexOf(lang)]||words[key]?.[0]||key}
 function mapDispatchOwner(){return myId+'|'+mySimbrief()}
 function mapActiveReservation(){const rows=typeof data!=='undefined'?data.reservations||[]:[],mine=rows.filter(r=>r.pilotId===myId&&r.status==='booked'&&apLL(r.dep)&&apLL(r.arr));const tracked=typeof TRK!=='undefined'&&TRK.trackId&&TRK.status!=='done'?mine.find(r=>r.id===TRK.resId):null;return tracked||mine.filter(r=>r.start<=Date.now()&&r.end>Date.now()).sort((a,b)=>b.start-a.start)[0]||null}
-function mapActivePlan(r){const a=acById(r.aircraftId);return {activeId:r.id,dep:r.dep,arr:r.arr,reg:a?.registration||'',type:a?.type||'',fno:r.flightNo||'',out:r.start,route:r.route||'',waypoints:[]}}
+function mapActivePlan(r,sb){const a=acById(r.aircraftId);
+ /* dados da reserva aceita sempre vencem; o SimBrief só contribui o navlog (waypoints) quando é do mesmo par dep/arr. */
+ const waypoints=sb&&sb.dep===r.dep&&sb.arr===r.arr&&Array.isArray(sb.waypoints)?sb.waypoints:[];
+ return {activeId:r.id,dep:r.dep,arr:r.arr,reg:a?.registration||'',type:a?.type||'',fno:r.flightNo||'',out:r.start,route:r.route||'',waypoints}}
 function mapDispatchPrepare(){const D=MAP_DISPATCH;if(D.owner===mapDispatchOwner())return;D.owner=mapDispatchOwner();D.sequence++;D.plan=null;D.error='';D.busy=0;D.at=0;MAP_TOOLS.dep='';MAP_TOOLS.arr='';MAP_TOOLS.ac='';MAP_TOOLS.selected=''}
 function mapDispatchHTML(){return`<div class="map-dispatch"><div class="row"><b>${esc(mapDispatchText('source'))}</b><button class="btn small" type="button" data-action="map-dispatch-refresh">↻ ${t('brf_refresh')}</button></div><div id="map-dispatch-status" aria-live="polite"></div><p class="hint">${esc(mapDispatchText('automatic'))}</p></div>`}
 function mapDispatchPaint(){const el=document.getElementById('map-dispatch-status');if(!el)return;const D=MAP_DISPATCH,p=D.plan;el.replaceChildren();
  const paragraph=(text,cls='hint')=>{const node=document.createElement('p');node.className=cls;node.textContent=text;el.append(node)};
- if(!mySimbrief()&&!p?.activeId){paragraph(mapDispatchText('missing'));return}if(D.busy)paragraph(t('sb_loading'));if(D.error)paragraph(D.error,'notice bad');
- if(p){if(p.activeId)paragraph(['Active flight','Voo ativo','Vuelo activo','Vol actif','Aktiver Flug','アクティブなフライト','当前航班','진행 중인 비행'][LANGS.indexOf(lang)]||'Active flight');paragraph([p.fno,p.dep+' → '+p.arr,p.reg,p.type].filter(Boolean).join(' · '));if(p.out)paragraph(dtf.format(p.out)+' · '+utcHM(p.out)+'Z');if(p.route)paragraph(p.route,'mono map-dispatch-route');if(!MAP_TOOLS.ac)paragraph(mapDispatchText('aircraft'));if(!p.waypoints?.length)paragraph(mapDispatchText('direct'))}
+ if(!p?.activeId){paragraph(mapDispatchText('noActive'));if(D.busy)paragraph(t('sb_loading'));if(D.error)paragraph(D.error,'notice bad');return}
+ if(D.busy)paragraph(t('sb_loading'));if(D.error)paragraph(D.error,'notice bad');
+ if(p){paragraph(['Active flight','Voo ativo','Vuelo activo','Vol actif','Aktiver Flug','アクティブなフライト','当前航班','진행 중인 비행'][LANGS.indexOf(lang)]||'Active flight');paragraph([p.fno,p.dep+' → '+p.arr,p.reg,p.type].filter(Boolean).join(' · '));if(p.out)paragraph(dtf.format(p.out)+' · '+utcHM(p.out)+'Z');if(p.route)paragraph(p.route,'mono map-dispatch-route');if(!MAP_TOOLS.ac)paragraph(mapDispatchText('aircraft'));if(!p.waypoints?.length)paragraph(mapDispatchText('direct'))}
 }
-function mapDispatchPoints(){const D=MAP_DISPATCH,p=D.plan,active=mapActiveReservation();if(active&&p?.activeId!==active.id)return null;if(D.owner!==mapDispatchOwner()||!p||MAP_TOOLS.dep!==p.dep||MAP_TOOLS.arr!==p.arr||!p.waypoints?.length)return null;return[apLL(p.dep),...p.waypoints,apLL(p.arr)].filter(Boolean)}
+function mapDispatchPoints(){const D=MAP_DISPATCH,p=D.plan,active=mapActiveReservation();if(!active||!p||p.activeId!==active.id)return null;if(D.owner!==mapDispatchOwner()||MAP_TOOLS.dep!==p.dep||MAP_TOOLS.arr!==p.arr||!p.waypoints?.length)return null;return[apLL(p.dep),...p.waypoints,apLL(p.arr)].filter(Boolean)}
 async function mapDispatchSync(m,Lf,force=false){if(view!=='map'||MAPV.map!==m||!m.getContainer().isConnected)return;mapDispatchPrepare();const D=MAP_DISPATCH,owner=D.owner;if(D.busy&&!force)return;const seq=++D.sequence;D.busy=seq;D.error='';mapDispatchPaint();
  const current=()=>seq===D.sequence&&owner===mapDispatchOwner()&&view==='map'&&MAPV.map===m&&m.getContainer().isConnected;
- try{const active=mapActiveReservation();if(!active&&!mySimbrief())return;let p=active?mapActivePlan(active):await fetchSimbrief();if(!current())return;const latestActive=mapActiveReservation();if(latestActive)p=mapActivePlan(latestActive);else if(p.activeId)return;if(!apLL(p.dep)||!apLL(p.arr))throw Error('SB_ERR:Unknown airport');
+ try{const active=mapActiveReservation();
+ if(!active){if(D.plan){D.plan=null;D.at=Date.now();mapDrawPlan(m,Lf);mapRefreshSpecial(m,Lf)}return}
+ let sb=null;if(mySimbrief())try{sb=await fetchSimbrief()}catch(e){} /* melhor esforço: só usado para o navlog do próprio voo ativo */
+ if(!current())return;
+ const latestActive=mapActiveReservation();if(!latestActive){if(D.plan){D.plan=null;mapDrawPlan(m,Lf);mapRefreshSpecial(m,Lf)}return}
+ const p=mapActivePlan(latestActive,sb);
+ if(!apLL(p.dep)||!apLL(p.arr))throw Error('SB_ERR:Unknown airport');
  const changed=force||JSON.stringify(p)!==JSON.stringify(D.plan);D.plan=p;D.at=Date.now();if(!changed)return;
  const S=MAP_TOOLS;S.dep=p.dep;S.arr=p.arr;S.selected=p.dep;S.ac=fleet.find(a=>regKey(a.registration)===regKey(p.reg))?.id||'';
  for(const [id,value] of [['map-plan-dep',S.dep],['map-plan-arr',S.arr],['map-explore-code',S.dep]]){const input=document.getElementById(id);if(input)input.value=value}
