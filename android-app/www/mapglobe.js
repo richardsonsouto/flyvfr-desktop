@@ -1,9 +1,10 @@
 /* Globo 3D: visualização alternativa ao mapa 2D na tela "Mapa" — imagem real da Terra (mosaico
-   NASA Blue Marble, via Wikimedia Commons, domínio público/CC), gira devagar, o piloto arrasta
-   para girar manualmente e usa a roda do mouse / pinça para aproximar. Mostra a frota (por
-   aeroporto), os voos em andamento (arco sobre a esfera) e os aeroportos onde as aeronaves estão
-   agora. Não é navegação: apenas uma visualização decorativa/informativa. Se a imagem real não
-   carregar (sem internet, CDN bloqueado), cai para um globo estilizado desenhado localmente. */
+   NASA Blue Marble, domínio público), gira devagar sozinho, o piloto arrasta para girar manualmente
+   (o giro automático volta depois de um tempo parado) e usa a roda do mouse / pinça para aproximar.
+   Mostra a frota (por aeroporto), os voos em andamento (arco sobre a esfera), os aeroportos onde as
+   aeronaves estão agora, e o tráfego VATSIM/IVAO (mesmos dados do mapa 2D). Não é navegação: apenas
+   uma visualização decorativa/informativa. Se a imagem real não carregar (sem internet, CDN
+   bloqueado), cai para um globo estilizado desenhado localmente. */
 const GLOBE_WORDS={
  to3d:['3D globe','Globo 3D','Globo 3D','Globe 3D','3D-Globus','3D地球儀','3D地球','3D 지구본'],
  to2d:['2D map','Mapa 2D','Mapa 2D','Carte 2D','2D-Karte','2Dマップ','2D地图','2D 지도'],
@@ -74,6 +75,21 @@ function globeMarkers(group){
  for(const r of flying){const a=apLL(r.dep),b=apLL(r.arr);if(!a||!b)continue;globeArc(group,a,b,0x4fc3f7);
   const f=Math.min(1,Math.max(0,(Date.now()-r.start)/(r.end-r.start))),[lat,lon]=gcPoint(a,b,f);globeDot(group,lat,lon,0xffffff,1.9)}
 }
+/* Tráfego VATSIM/IVAO (mesmos dados já buscados pelo mapa 2D em MAPV.tfcData a cada 20s — aqui só
+   redesenha os pontos sobre a esfera, sem nova busca na rede). O ADS-B real fica de fora do globo
+   porque só é buscado quando o mapa 2D está bem aproximado (zoom alto), o que não faz sentido numa
+   visão do planeta inteiro. Cores iguais à legenda do mapa 2D: VATSIM verde, IVAO azul. */
+function globeDrawTraffic(){
+ const G=MAP_GLOBE;if(!G.tfcGroup)return;
+ while(G.tfcGroup.children.length){const m=G.tfcGroup.children[0];G.tfcGroup.remove(m);m.geometry?.dispose();m.material?.dispose()}
+ const alSel=MAPV.airline&&MAPV.airline!=="all",pre=alSel&&typeof AIRLINE_ICAO!=="undefined"?String(AIRLINE_ICAO[MAPV.airline]||"").toUpperCase():"",re=pre?new RegExp("^"+pre):null;
+ for(const p of (MAPV.tfcData||[])){
+  if(p.net!=="VATSIM"&&p.net!=="IVAO")continue;
+  if(re&&!re.test(String(p.cs||"").toUpperCase()))continue;
+  if(typeof p.lat!=="number"||typeof p.lon!=="number")continue;
+  globeDot(G.tfcGroup,p.lat,p.lon,p.net==="VATSIM"?0x2dbe60:0x2e90fa,1.1)
+ }
+}
 /* Brilho atmosférico (Fresnel) na borda do globo, como num render realista — truque clássico do three.js. */
 function globeAtmosphere(radius){
  const material=new THREE.ShaderMaterial({
@@ -87,7 +103,10 @@ function globeBind(container){
  G._pd=e=>{down=true;moved=false;G.autoSpin=false;lx=e.clientX;ly=e.clientY};
  G._pm=e=>{if(!down||!G.group)return;const dx=e.clientX-lx,dy=e.clientY-ly;if(Math.abs(dx)+Math.abs(dy)>2)moved=true;lx=e.clientX;ly=e.clientY;
   G.rot.y+=dx*0.006;G.rot.x=Math.max(-1.3,Math.min(1.3,G.rot.x+dy*0.006));G.group.rotation.y=G.rot.y;G.group.rotation.x=G.rot.x};
- G._pu=()=>{down=false;setTimeout(()=>{if(!moved)G.autoSpin=true},2500)};
+ /* Bug corrigido: antes, se o piloto arrastasse o globo (moved=true), o giro automático nunca mais
+    voltava — só retomava depois de um toque sem arrastar. Agora sempre retoma depois de um tempo
+    parado, maior se foi um arraste (deu tempo de olhar) e menor se foi só um toque. */
+ G._pu=()=>{down=false;clearTimeout(G._spinT);G._spinT=setTimeout(()=>{G.autoSpin=true},moved?4000:600)};
  G._wh=e=>{e.preventDefault();G.dist=Math.max(130,Math.min(420,G.dist+e.deltaY*0.2));if(G.camera){G.camera.position.setLength(G.dist)}};
  container.addEventListener('pointerdown',G._pd);container.addEventListener('pointermove',G._pm);
  container.addEventListener('pointerup',G._pu);container.addEventListener('pointerleave',G._pu);
@@ -97,9 +116,11 @@ function globeLoop(){const G=MAP_GLOBE;if(!G.renderer||!G.group)return;
  if(G.autoSpin){G.rot.y+=0.0018;G.group.rotation.y=G.rot.y}
  G.renderer.render(G.scene,G.camera);G.raf=requestAnimationFrame(globeLoop)}
 function mapGlobeDestroy(){const G=MAP_GLOBE;if(G.raf)cancelAnimationFrame(G.raf);
+ if(G.tfcTimer)clearInterval(G.tfcTimer);
+ clearTimeout(G._spinT);
  if(G.container){for(const [ev,fn] of [['pointerdown',G._pd],['pointermove',G._pm],['pointerup',G._pu],['pointerleave',G._pu],['wheel',G._wh]])if(fn)G.container.removeEventListener(ev,fn)}
  G.ro?.disconnect();if(G.renderer){try{G.renderer.dispose()}catch(e){}try{G.renderer.domElement?.remove()}catch(e){}}
- Object.assign(G,{renderer:null,scene:null,camera:null,group:null,raf:null,container:null,ro:null})}
+ Object.assign(G,{renderer:null,scene:null,camera:null,group:null,tfcGroup:null,raf:null,container:null,ro:null,tfcTimer:null})}
 async function mapGlobeInit(container){
  try{await loadThree()}catch(e){container.innerHTML=`<p class="hint" style="padding:16px">${esc(globeT('err'))}</p>`;return}
  if(!container.isConnected)return;mapGlobeDestroy();const G=MAP_GLOBE;
@@ -127,7 +148,9 @@ async function mapGlobeInit(container){
  group.add(earth);
  group.add(globeAtmosphere(103));
  globeMarkers(group);
+ G.tfcGroup=new THREE.Group();group.add(G.tfcGroup);
  G.renderer=renderer;G.scene=scene;G.camera=camera;G.group=group;G.container=container;
+ globeDrawTraffic();G.tfcTimer=setInterval(globeDrawTraffic,5000);
  globeBind(container);
  const ro=new ResizeObserver(()=>{if(!G.renderer||!G.container?.isConnected)return;const cw=G.container.clientWidth||1,ch=G.container.clientHeight||1;G.renderer.setSize(cw,ch);G.camera.aspect=cw/ch;G.camera.updateProjectionMatrix()});
  ro.observe(container);G.ro=ro;
