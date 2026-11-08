@@ -343,7 +343,6 @@ async function initMap(){
   m.on("popupopen",ev=>{const c=ev.popup.getElement();c&&c.addEventListener("click",x=>{const b=x.target.closest("[data-ac]");if(b){m.closePopup();paintAircraftSheet(b.dataset.ac)}})});
   if(typeof mapToolsInit==="function")await mapToolsInit(m,Lf);
   if(typeof mapRadarInit==="function"&&el.isConnected&&MAPV.map===m)mapRadarInit(m,Lf);
-  if(typeof mapRadar3DInit==="function"&&el.isConnected&&MAPV.map===m)mapRadar3DInit(m,Lf);
   if(typeof mapChartsInit==="function"&&el.isConnected&&MAPV.map===m)await mapChartsInit(m,Lf);
   if(typeof netMapInit==='function'&&el.isConnected&&MAPV.map===m&&MAPV.control)netMapInit(m,Lf,MAPV.control);
   setTimeout(()=>m.invalidateSize(),60);
