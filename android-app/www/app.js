@@ -1264,7 +1264,7 @@ function wxBody(c,st){
   if(st.loading)body=`<p class="muted">${t("wx_loading")}</p>`;
   else if(st.unsupported)body=`<p class="muted">${t("wx_here_only")}</p>`;
   else if(st.error)body=`<p class="muted">${t("wx_error")}</p>`;
-  else{const d=st.data,cat={VFR:"ok",MVFR:"neutral",IFR:"warn",LIFR:"bad"}[d.fltCat]||"neutral",dec=wxMode()==="dec"&&typeof wxDecodedHtml==="function";
+  else{const d=st.data,cat={VFR:"ok",MVFR:"warn",IFR:"bad",LIFR:"bad"}[d.fltCat]||"neutral",dec=wxMode()==="dec"&&typeof wxDecodedHtml==="function";
     const seg=(d.metar||d.taf)&&typeof wxdT==="function"?`<div class="seg wx-seg" role="group">${["raw","dec"].map(k=>`<button type="button" data-wx-mode="${k}" aria-pressed="${(k==="dec")===dec}">${esc(wxdT(k))}</button>`).join("")}</div>`:"";
     body=`<div class="wx-top">${d.fltCat?`<span class="chip ${cat}">${esc(d.fltCat)}</span>`:"<span></span>"}${seg}</div>
       ${dec?wxDecodedHtml(d):`<div class="wx-lab">METAR</div><pre class="wx-raw">${d.metar?esc(d.metar):t("wx_none")}</pre>

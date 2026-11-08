@@ -77,7 +77,7 @@ function briefWxBox(c,compact=false){
   if(st.loading)return`<p class="muted">${t("wx_loading")}</p>`;
   if(st.unsupported)return`<p class="muted">${t("wx_here_only")}</p>`;
   if(st.error)return`<p class="muted">${t("wx_error")}</p>`;
-  const d=st.data,dec=wxMode()==="dec"&&typeof wxDecodedHtml==="function",cat={VFR:"ok",MVFR:"neutral",IFR:"warn",LIFR:"bad"}[d.fltCat]||"neutral";
+  const d=st.data,dec=wxMode()==="dec"&&typeof wxDecodedHtml==="function",cat={VFR:"ok",MVFR:"warn",IFR:"bad",LIFR:"bad"}[d.fltCat]||"neutral";
   if(compact&&!BRF.printing){const kind=BRF.wxReport==='TAF'?'TAF':'METAR';return `<div class="wx-top brf-weather-mode"><span class="wx-lab">${kind}</span><div class="seg wx-seg">${['raw','dec'].map(k=>`<button type="button" data-action="brf-wxmode" data-v="${k}" aria-pressed="${(k==='dec')===dec}">${esc(wxdT(k))}</button>`).join('')}</div></div><div class="brf-wx-both brf-wx-coded"><section class="brf-wx-report-content${dec?' is-decoded':''}" data-weather-report="${kind}">${dec?'':`<pre class="wx-raw">${kind==='TAF'?(d.taf?tafVisualRawHTML(d.taf):t('wx_none')):(d.metar?metarVisualRawHTML(d.metar):t('wx_none'))}</pre>`}${kind==='METAR'?metarVisualHTML(d.metar,!dec):tafVisualHTML(d.taf,!dec)}</section></div>`;}
 
 

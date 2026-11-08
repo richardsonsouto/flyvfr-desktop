@@ -82,7 +82,7 @@
  const WXP=new Set();
  function wxChip(c){const k=typeof WX_CACHE!=="undefined"&&WX_CACHE[c],d=k&&k.data;
   if(!d){if(!WXP.has(c)&&typeof fetchWx==="function"&&navigator.onLine){WXP.add(c);fetchWx(c).then(()=>{if(view==="home")render()}).catch(()=>{})}return""}
-  const cat=d.fltCat||"",cls={VFR:"ok",MVFR:"neutral",IFR:"warn",LIFR:"bad"}[cat]||"neutral",w=typeof dvWind==="function"?dvWind(d.metar):null;
+  const cat=d.fltCat||"",cls={VFR:"ok",MVFR:"warn",IFR:"bad",LIFR:"bad"}[cat]||"neutral",w=typeof dvWind==="function"?dvWind(d.metar):null;
   if(!cat&&!w)return"";return`<span class="hm-chip ${cls}">${esc(c)}${cat?" "+esc(cat):""}${w?` · ${w.dir==null?"VRB":String(w.dir).padStart(3,"0")}/${String(w.spd).padStart(2,"0")}kt`:""}</span>`}
  function nextCard(){const up=upcoming(),r=up[0],free=typeof flIsFree==="function"&&flIsFree();
   if(!r)return`<section class="hm-card hm-next hm-empty"><div class="hm-ein"><span class="hm-big" aria-hidden="true">✈</span><h3>${esc(ht("none"))}</h3><p class="muted">${esc(ht(free?"noneFree":"noneP"))}</p>
