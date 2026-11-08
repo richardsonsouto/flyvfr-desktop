@@ -28,13 +28,14 @@ function loadThree(){if(window.THREE)return Promise.resolve();if(threeP)return t
  threeP=new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.onload=()=>ok();s.onerror=()=>{threeP=null;no(new Error('three'))};document.head.appendChild(s)});
  return threeP}
 /* Mosaico NASA Blue Marble (Reto Stöckli / Robert Simmon, NASA GSFC), a mesma imagem usada no exemplo
-   oficial de globo do three.js — servida pelo próprio pacote npm "three" (mesma versão carregada
-   acima) via dois CDNs que sempre enviam cabeçalho CORS, então a textura carrega sem o navegador
-   recusar por tainted canvas (o Wikimedia Commons, tentado antes, falhava nessa parte e caía sempre
-   no globo estilizado de reserva). Tenta o jsDelivr primeiro e o unpkg como segunda opção. */
+   oficial de globo do three.js. As tentativas anteriores falharam: o pacote npm "three" não inclui a
+   pasta de texturas (404 no jsDelivr/unpkg) e o Wikimedia Commons também não funcionou. Agora busca
+   direto do repositório no GitHub (confirmado existindo nessa tag) via dois espelhos que sempre
+   enviam cabeçalho CORS — jsDelivr (modo "gh") primeiro, raw.githubusercontent.com como reserva —
+   e só cai no globo estilizado desenhado localmente se os dois falharem. */
 const GLOBE_TEXTURE_URLS=[
- 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/textures/planets/earth_atmos_2048.jpg',
- 'https://unpkg.com/three@0.128.0/examples/textures/planets/earth_atmos_2048.jpg'
+ 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_2048.jpg',
+ 'https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/textures/planets/earth_atmos_2048.jpg'
 ];
 function loadGlobeTexture(){
  const loader=new THREE.TextureLoader();loader.crossOrigin='anonymous';
