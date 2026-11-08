@@ -10,6 +10,19 @@ const GLOBE_WORDS={
  err:['3D not supported in this browser.','3D não suportado neste navegador.','3D no compatible con este navegador.','3D non pris en charge par ce navigateur.','3D wird von diesem Browser nicht unterstützt.','このブラウザは3D表示に対応していません。','此浏览器不支持3D显示。','이 브라우저는 3D를 지원하지 않습니다.']
 };
 function globeT(k){return GLOBE_WORDS[k][LANGS.indexOf(lang)]||GLOBE_WORDS[k][0]}
+/* Tenta criar o contexto WebGL com várias combinações de opções, relaxando failIfMajorPerformanceCaveat
+   (que faz alguns navegadores recusarem o contexto quando só há renderização por software disponível —
+   GPU na lista de bloqueio, aceleração de hardware desativada, VM/área de trabalho remota). */
+function globeGetContext(canvas){
+ const optsList=[{alpha:true,antialias:true,failIfMajorPerformanceCaveat:false},
+  {alpha:true,antialias:false,failIfMajorPerformanceCaveat:false},
+  {alpha:true,antialias:false,failIfMajorPerformanceCaveat:false,powerPreference:'low-power'}];
+ for(const name of['webgl2','webgl','experimental-webgl']){
+  for(const o of optsList){
+   try{const gl=canvas.getContext(name,o);if(gl)return gl}catch(e){}
+  }
+ }
+ return null}
 let threeP=null;
 function loadThree(){if(window.THREE)return Promise.resolve();if(threeP)return threeP;
  threeP=new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.onload=()=>ok();s.onerror=()=>{threeP=null;no(new Error('three'))};document.head.appendChild(s)});
@@ -82,7 +95,14 @@ async function mapGlobeInit(container){
  try{await loadThree()}catch(e){container.innerHTML=`<p class="hint" style="padding:16px">${esc(globeT('err'))}</p>`;return}
  if(!container.isConnected)return;mapGlobeDestroy();const G=MAP_GLOBE;
  const w=container.clientWidth||300,h=container.clientHeight||300;
- let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true})}catch(e){container.innerHTML=`<p class="hint" style="padding:16px">${esc(globeT('err'))}</p>`;return}
+ /* Alguns navegadores (aceleração de hardware desativada, GPU na lista de bloqueio, VM/área de
+    trabalho remota) recusam criar o contexto WebGL com as opções padrão porque ficariam renderizando
+    por software. failIfMajorPerformanceCaveat:false permite seguir mesmo assim (mais lento, mas
+    funciona) em vez de falhar direto. */
+ const canvas=document.createElement('canvas'),gl=globeGetContext(canvas);
+ let renderer;
+ try{renderer=gl?new THREE.WebGLRenderer({canvas,context:gl,antialias:true,alpha:true}):new THREE.WebGLRenderer({antialias:true,alpha:true})}
+ catch(e){container.innerHTML=`<p class="hint" style="padding:16px">${esc(globeT('err'))}</p>`;return}
  if('outputEncoding' in renderer)renderer.outputEncoding=THREE.sRGBEncoding;
  renderer.setSize(w,h);renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
  container.innerHTML='';container.appendChild(renderer.domElement);
