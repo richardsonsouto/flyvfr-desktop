@@ -66,6 +66,9 @@
 
 /* passos guiados: título no topo (::before) + círculo numerado (::after, absoluto) — desktop e celular */
 .op-roster[data-stage=config] [data-eyebrow]{position:relative;padding-left:27px}
+/* .rs-layout-sidebar tem padding:10px!important (linha acima), que sem isso derrubava o
+   padding-left para 10px e fazia o círculo do passo 4 ("Quando voar") cair em cima do texto */
+.op-roster[data-stage=config] .rs-layout-sidebar[data-eyebrow]{padding-left:27px!important}
 .op-roster[data-stage=config] [data-eyebrow]::before{
  content:attr(data-eyebrow);display:flex;align-items:center;min-height:20px;
  font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;font-weight:700;

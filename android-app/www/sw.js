@@ -1,6 +1,6 @@
 // Service worker: deixa o app abrir rápido e funcionar sem internet (somente leitura).
 // Ao publicar uma nova versão do app, aumente o número abaixo.
-const VERSION = "vfr-v653";
+const VERSION = "vfr-v654";
 const SHELL = ["pilot-tools.js",
  "socialauth.js", "socialauth.css",
  "pilotavatar.js", "pilotavatar.css",
