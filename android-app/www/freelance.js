@@ -138,7 +138,7 @@ function flView(){
   const opts=fleet.map(x=>{const pos=posNow(x.id);return`<option value="${esc(x.id)}" ${x.id===FLV.ac?"selected":""}>${esc(x.registration)} · ${esc(x.type)}${pos?" · "+esc(pos):""} — ${esc(x.owner===myId?ft("fl_mine"):ft("fl_by",{p:names[x.owner]||t("a_pilot")}))}</option>`}).join("");
   const n=P.legs.length;
   const legs=P.legs.map((g,i)=>`<fieldset class="fl-leg" data-i="${i}"><legend>${ft("fl_leg",{n:i+1})}${n>1?` <button type="button" class="linkish fl-leg-x" data-action="fl-del-leg" data-i="${i}" aria-label="${esc(ft("fl_del_leg"))}">✕</button>`:""}</legend>
-   <div class="grid2"><label>${ft("fl_dep")} ${i===0?`<span class="hint">${P.fixed?ft("fl_dep_fixed"):ft("fl_dep_any")}</span>`:""}<input ${i===0?'id="fl-dep"':""} class="up mono" maxlength="4" value="${esc(i===0?(P.fixed||FLV.dep):g.dep)}" ${i>0||P.fixed?"readonly":""} placeholder="SBGR" autocomplete="off"></label>
+   <div class="grid2 fl-route-fields"><label>${ft("fl_dep")} ${i===0?`<span class="hint">${P.fixed?ft("fl_dep_fixed"):ft("fl_dep_any")}</span>`:""}<input ${i===0?'id="fl-dep"':""} class="up mono" maxlength="4" value="${esc(i===0?(P.fixed||FLV.dep):g.dep)}" ${i>0||P.fixed?"readonly":""} placeholder="SBGR" autocomplete="off"></label>
    <label>${ft("fl_arr")}<input class="up mono fl-arr" data-i="${i}" maxlength="4" value="${esc(g.src.arr)}" placeholder="SBRJ" autocomplete="off" required></label></div>
    <div class="grid2"><label>${ft("fl_std")}<input class="fl-std" data-i="${i}" type="datetime-local" step="300" value="${toLocalInput(g.std)}" min="${toLocalInput(i===0?rsSoonest():P.legs[i-1].sta+FL_TURN)}" required></label>
    <label>${ft("fl_fno")}<input class="up mono fl-fno" data-i="${i}" maxlength="8" value="${esc(g.src.fno)}"></label></div>

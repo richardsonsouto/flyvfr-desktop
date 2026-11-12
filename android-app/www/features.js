@@ -56,7 +56,8 @@ function posChip(id){const fl=flyingNow(id),mv=movingNow(id);
   if(p)return`<span class="loc" title="${esc(t("loc_now_t"))}">📍 ${esc(p)}</span>`;
   const next=nextAfter(id,Date.now());
   if(next){const departure=next.start+(next.rosterId?20*6e4:0);return`<button type="button" class="loc loc-next" data-action="open-aircraft" data-id="${esc(id)}" title="${esc(t("loc_next_t",{t:fmt(departure)}))}"><span>${esc(next.dep)} → ${esc(next.arr)}</span><small>${esc(t("in_x",{x:rel(departure)}))}</small></button>`}
-  return`<button type="button" class="loc loc-choose" data-action="go-roster" data-ac="${esc(id)}" data-free="1" title="${esc(t("loc_choose_t"))}" ${canWrite===false?'disabled':''}>✈ ${esc(t("loc_choose"))}</button>`}
+  const free=typeof flIsFree==="function"&&flIsFree();
+  return`<button type="button" class="loc loc-choose" data-action="go-roster" data-ac="${esc(id)}" data-free="1" ${free?"":`title="${esc(t("loc_choose_t"))}"`} ${canWrite===false?'disabled':''}>${esc(t(free?"flight_gen":"loc_choose"))}</button>`}
 function posLineHTML(id){const fl=flyingNow(id),p=posNow(id),rs=!fl&&p?realSynced(id):null;
   if(!fl&&!p)return '';
   return`<div class="pos-line">${fl?`<span>${t("loc_flying",{dep:wxCode(fl.dep),arr:wxCode(fl.arr),t:fmtT(fl.end)})}</span>`:`<span>${t("loc_now",{icao:wxCode(p)})}${rs?` <span class="chip real-sync" title="${esc(t("loc_real_t",{t:fmtT(rs.end)}))}">📡 ${t("loc_real")}</span>`:""}</span>`}</div>`}
@@ -263,7 +264,7 @@ setInterval(()=>{if(session)paintBell()},60e3);
 /* =====================================================================
    6. Mapa da frota (Leaflet + mapa da CARTO/OpenStreetMap)
    ===================================================================== */
-let leafletP=null,MAPV={map:null,center:null,zoom:null,airline:"all"};
+let leafletP=null,OPS_LIVE_MAP=null,MAPV={map:null,center:null,zoom:null,airline:"all"};
 function loadLeaflet(){if(window.L)return Promise.resolve();if(leafletP)return leafletP;
   leafletP=new Promise((ok,no)=>{const css=document.createElement("link");css.rel="stylesheet";css.href="vendor/leaflet/leaflet.css";document.head.appendChild(css);
     const s=document.createElement("script");s.src="vendor/leaflet/leaflet.js";s.onload=()=>ok();s.onerror=()=>{leafletP=null;no(new Error("leaflet"))};document.head.appendChild(s)});
@@ -289,26 +290,52 @@ function viewMap(){
     <details class="panel map-side"><summary>${t("map_live_h")}</summary><div id="map-live">${typeof liveListHTML==="function"?liveListHTML():""}</div></details>
     <p class="hint" id="net-map-status" aria-live="polite"></p></div></section>`;
 }
+function initMapLayerControl(m,Lf,base){
+  const operations=m.operations,briefing=m.briefing,baseKey=briefing?"vfr-brf-base":"vfr-map-base",overlayKey=briefing?"vfr-brf-ov":"vfr-map-ov";
+  const readOverlays=()=>{try{return JSON.parse(localStorage.getItem(overlayKey)||"{}")||{}}catch(e){return {}}};
+  let baseName;try{baseName=localStorage.getItem(baseKey)||localStorage.getItem("vfr-map-base")}catch(e){}
+  (base[baseName]||base[t("brf_m_osm")]).addTo(m);
+  const traffic=briefing?(briefing.traffic={airline:"all"}):operations||MAPV;
+  const tfc=traffic.tfc={VATSIM:Lf.layerGroup([],{key:"VATSIM"}),IVAO:Lf.layerGroup([],{key:"IVAO"}),ADSB:Lf.layerGroup([],{key:"ADSB"})};
+  const overlays={[`<span class="tfc-k vat"></span> VATSIM`]:tfc.VATSIM,[`<span class="tfc-k ivao"></span> IVAO`]:tfc.IVAO,[`<span class="tfc-k real"></span> ${esc(t("real_layer"))}`]:tfc.ADSB};
+  const saved=readOverlays(),control=Lf.control.layers(base,overlays,{collapsed:true,position:"topright"}).addTo(m);
+  if(briefing)briefing.control=control;else traffic.control=control;
+  const toggle=control.getContainer().querySelector('.leaflet-control-layers-toggle');
+  toggle.setAttribute('aria-label',mapT('layers'));toggle.title=mapT('layers');
+  for(const layer of Object.values(tfc))if(saved[layer.options.key]??!briefing)layer.addTo(m);
+  m.on("baselayerchange",e=>{try{localStorage.setItem(baseKey,e.name)}catch(x){}});
+  const save=(e,on)=>{
+    if(mapToolsMap()!==m||!m.getContainer().isConnected)return;
+    const key=e.layer.options.key;
+    if(!key)return;
+    try{const prefs=readOverlays();prefs[key]=on;localStorage.setItem(overlayKey,JSON.stringify(prefs))}catch(x){}
+    if(operations){operations.refresh();if(key==="ADSB")mapTraffic(true,m)}
+    else if(Object.hasOwn(tfc,key))mapTraffic(true,m);
+  };
+  m.on("overlayadd",e=>save(e,true));m.on("overlayremove",e=>save(e,false));
+  m.on("moveend",()=>mapTraffic(false,m));
+  setTimeout(()=>mapTraffic(true,m),300);
+  return control;
+}
+async function initMapLayerOverlays(m,Lf,control){
+  if(mapToolsMap()!==m||!m.getContainer().isConnected)return;
+  // Register every layer before any provider finishes loading.
+  const tools=mapToolsInit(m,Lf);
+  const radar=mapRadarInit(m,Lf);
+  if(m.briefing&&brfMapLayerPrefs().WEATHER_RADAR===true)radar.group.addTo(m);
+  const charts=mapChartsInit(m,Lf);
+  netMapInit(m,Lf,control);
+  const results=await Promise.allSettled([tools,charts]);
+  for(const result of results)if(result.status==='rejected')console.warn("Map layers",result.reason);
+}
 async function initMap(){
   const el=$("#fleet-map");if(!el)return;
   try{await Promise.all([loadLeaflet(),loadAirports()])}catch(e){el.innerHTML=`<div class="map-loading">${t("map_err")}</div>`;return}
   if(!el.isConnected)return;el.innerHTML="";
   if(MAPV.map){MAPV.center=MAPV.map.getCenter();MAPV.zoom=MAPV.map.getZoom();MAPV.map.remove()}
   const Lf=window.L;const m=Lf.map(el,{worldCopyJump:true,minZoom:2,zoomControl:true}).setView(MAPV.center||[-8,-20],MAPV.zoom||3);MAPV.map=m;
-  /* mapas de fundo (OpenStreetMap, satélite, relevo) e tráfego VATSIM/IVAO, iguais aos da sala de briefing */
   m.setMaxZoom(19);
-  if(typeof brfBaseLayers==="function"){
-    const base=brfBaseLayers(Lf),bk=(()=>{try{return localStorage.getItem("vfr-map-base")}catch(e){return null}})();(base[bk]||base[t("brf_m_osm")]).addTo(m);
-    MAPV.tfc={VATSIM:Lf.layerGroup([],{key:"VATSIM"}),IVAO:Lf.layerGroup([],{key:"IVAO"}),ADSB:Lf.layerGroup([],{key:"ADSB"})};
-    const ov={[`<span class="tfc-k vat"></span> VATSIM`]:MAPV.tfc.VATSIM,[`<span class="tfc-k ivao"></span> IVAO`]:MAPV.tfc.IVAO,[`<span class="tfc-k real"></span> ${t("real_layer")}`]:MAPV.tfc.ADSB};
-    let saved={};try{saved=JSON.parse(localStorage.getItem("vfr-map-ov")||"{}")}catch(e){}
-    for(const lay of Object.values(ov))if(saved[lay.options.key]!==false)lay.addTo(m);
-    MAPV.control=Lf.control.layers(base,ov,{collapsed:true,position:"topright"}).addTo(m);
-    m.on("baselayerchange",e=>{try{localStorage.setItem("vfr-map-base",e.name)}catch(x){}});
-    const sv=(e,on)=>{try{const s=JSON.parse(localStorage.getItem("vfr-map-ov")||"{}");s[e.layer.options.key]=on;localStorage.setItem("vfr-map-ov",JSON.stringify(s))}catch(x){}mapTraffic(true)};
-    m.on("overlayadd",e=>sv(e,true));m.on("overlayremove",e=>sv(e,false));m.on("moveend",()=>mapTraffic());
-    setTimeout(()=>mapTraffic(true),300)}
-  else Lf.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,className:"vfr-tl-map",attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(m);
+  const control=initMapLayerControl(m,Lf,brfBaseLayers(Lf));
   const markers=Lf.layerGroup().addTo(m);
   m.refreshFleetMarkers=()=>{
     markers.clearLayers();
@@ -341,11 +368,8 @@ async function initMap(){
   if(!MAPV.center){const pts=[...Object.keys(groups).map(apLL),...flying.flatMap(r=>[apLL(r.dep),apLL(r.arr)])].filter(Boolean);if(pts.length>1)m.fitBounds(pts,{padding:[30,30],maxZoom:6});else if(pts.length)m.setView(pts[0],5)}
   if(typeof drawLive==="function"){liveLayer=null;liveTrail=null;liveSel=null;drawLive(m);liveDrawn=[...liveAcIds()].sort().join()}
   m.on("popupopen",ev=>{const c=ev.popup.getElement();c&&c.addEventListener("click",x=>{const b=x.target.closest("[data-ac]");if(b){m.closePopup();paintAircraftSheet(b.dataset.ac)}})});
-  if(typeof mapToolsInit==="function")await mapToolsInit(m,Lf);
-  if(typeof mapRadarInit==="function"&&el.isConnected&&MAPV.map===m)mapRadarInit(m,Lf);
-  if(typeof mapChartsInit==="function"&&el.isConnected&&MAPV.map===m)await mapChartsInit(m,Lf);
-  if(typeof netMapInit==='function'&&el.isConnected&&MAPV.map===m&&MAPV.control)netMapInit(m,Lf,MAPV.control);
-  setTimeout(()=>m.invalidateSize(),60);
+  await initMapLayerOverlays(m,Lf,control);
+  setTimeout(()=>{if(el.isConnected&&MAPV.map===m)m.invalidateSize()},60);
 }
 document.addEventListener("change",e=>{if(e.target.id==="map-al"){MAPV.airline=e.target.value;render()}});
 document.addEventListener("click",e=>{const b=e.target.closest('[data-action="map-go"]');if(!b||!MAPV.map)return;
@@ -512,13 +536,25 @@ document.addEventListener("click",e=>{const el=e.target.closest("[data-action]")
 let LIVERIES=null,livP=null;
 let fLiv=(()=>{try{return localStorage.getItem("vfr-fliv")!=="0"}catch(e){return true}})();
 function loadLiveries(){if(LIVERIES)return Promise.resolve(LIVERIES);if(livP)return livP;
-  livP=fetch("liveries.json?v=3").then(r=>r.ok?r.json():{}).then(j=>{LIVERIES=j.regs||{};LIV_S=j.sims||[];LIV_B=j.bases||[];LIVERIES_AT=j.at||null;render();return LIVERIES}).catch(()=>{LIVERIES={};return LIVERIES});return livP}
+  livP=fetch("liveries.json?v=5").then(r=>r.ok?r.json():{}).then(j=>{
+    LIVERIES=Object.create(null);
+    for(const [registration,paints] of Object.entries(j.regs||{})){
+      const key=regKey(registration);
+      if(!key)continue;
+      const list=LIVERIES[key]??=[];
+      for(const paint of paints)if(!list.some(p=>p[0]===paint[0]&&p[1]===paint[1]&&p[3]===paint[3]))list.push(paint);
+    }
+    LIV_S=j.sims||[];LIV_B=j.bases||[];LIVERIES_AT=j.at||null;render();return LIVERIES;
+  }).catch(()=>{LIVERIES={};return LIVERIES});return livP}
 let LIV_S=[],LIV_B=[];
 let LIVERIES_AT=null;
-const livOf=id=>{const a=acById(id);return LIVERIES&&a?(LIVERIES[a.registration]||[]):[]};
+const livOf=id=>{const a=acById(id);return LIVERIES&&a?(LIVERIES[regKey(a.registration)]||[]):[]};
 const hasLivery=id=>livOf(id).length>0;
 const SIMLBL={MSFS2020:"MSFS 2020",MSFS2024:"MSFS 2024","MSFS2020/24":"MSFS 2020/24",XP12:"X-Plane 12",XP11:"X-Plane 11",XP:"X-Plane"};
-function livHref(id,e){const reg=((acById(id)||{}).registration||"").toLowerCase();return e[3]===1?`https://forums.x-plane.org/files/file/${e[0]}-${encodeURIComponent(reg)}/`:`https://flightsim.to/addon/${e[0]}/${encodeURIComponent(reg)}`}
+function livHref(id,e){
+  const slug=encodeURIComponent(e[4]||((acById(id)||{}).registration||"").toLowerCase());
+  return e[3]===1?`https://forums.x-plane.org/files/file/${e[0]}-${slug}/`:`https://flightsim.to/addon/${e[0]}/${slug}`;
+}
 const SIM_OK={msfs2020:["MSFS2020","MSFS2020/24"],msfs2024:["MSFS2024","MSFS2020/24","MSFS2020"],xp11:["XP11","XP"],xp12:["XP12","XP"]};
 /* só as pinturas dos simuladores que o piloto marcou no cadastro (sem simulador marcado: mostra todas) */
 function myLivOf(id){const L=livOf(id),m=typeof mySims==="function"?mySims():[];if(!m.length)return L;
@@ -534,37 +570,46 @@ function liveryHTML(id,compact=false){
   const L=myLivOf(id),all=livOf(id).length,m=typeof mySims==="function"?mySims():[];
   const forLine=m.length?`<p class="hint" style="margin:0 0 6px">${t("liv_for",{s:esc(m.map(k=>SIMS[k]||t("sim_other")).join(", "))})} · <button class="linkish" type="button" data-action="my-sims">${t("liv_change")}</button></p>`:"";
   return`<div class="liv"><h3 style="margin:0 0 6px">${t("liv_h",{n:L.length})}</h3>${forLine}
-   ${L.length?`<div class="liv-list">${L.map(([lid,si,bi,src])=>{const sim=LIV_S[si]||"",base=LIV_B[bi]||"",xp=src===1;const href=livHref(id,[lid,si,bi,src]);return`<a class="liv-i" href="${href}" target="_blank" rel="noopener"><span class="chip neutral">${esc(SIMLBL[sim]||sim||(xp?"X-Plane":"MSFS"))}</span><span><b>${esc(base||(xp?"X-Plane":"Livery"))}</b><small>${liverySourceHTML(xp)} #${lid}</small></span><span aria-hidden="true">↗</span></a>`}).join("")}</div>`
+   ${L.length?`<div class="liv-list">${L.map(entry=>{const [lid,si,bi,src]=entry,sim=LIV_S[si]||"",base=LIV_B[bi]||"",xp=src===1;const href=livHref(id,entry);return`<a class="liv-i" href="${href}" target="_blank" rel="noopener"><span class="chip neutral">${esc(SIMLBL[sim]||sim||(xp?"X-Plane":"MSFS"))}</span><span><b>${esc(base||(xp?"X-Plane":"Livery"))}</b><small>${liverySourceHTML(xp)} #${lid}</small></span><span aria-hidden="true">↗</span></a>`}).join("")}</div>`
      :`<p class="muted" style="margin:0">${t(all&&m.length?"liv_none_mine":"liv_none")}</p>`}
    ${compact&&!L.length?'':`<p class="hint" data-simulator-text-only style="margin:6px 0 0">${t(compact?'rs_livery_download_hint':'liv_src')}</p>`}</div>`;
 }
 document.addEventListener("click",e=>{const el=e.target.closest('[data-action="f-liv"]');if(!el)return;fLiv=!fLiv;try{localStorage.setItem("vfr-fliv",fLiv?"1":"0")}catch(x){}fLimit=60;render()});
 
 /* tráfego VATSIM/IVAO no menu Mapa (função "traffic" do servidor; os voos FlyVFR já aparecem pelo mapa ao vivo) */
-let mapTfcBusy=false,mapTfcAt=0;
-async function mapTraffic(force){
-  const m=MAPV.map;if(!m||!MAPV.tfc||view!=="map")return;
-  const on=["VATSIM","IVAO"].filter(n=>m.hasLayer(MAPV.tfc[n]));if(MAPV.focusReg&&Date.now()-(MAPV.focusAt||(MAPV.focusAt=Date.now()))>6e4){MAPV.focusReg=null;MAPV.focusAt=0}
-  const draw=()=>{if(!MAPV.tfc)return;const Lf=window.L,bb=m.getBounds().pad(.2),z=m.getZoom();for(const n of ["VATSIM","IVAO","ADSB"])MAPV.tfc[n].clearLayers();
-    const alSel=MAPV.airline&&MAPV.airline!=="all";
+async function mapTraffic(force,m=mapToolsMap()){
+  const state=m?.operations||m?.briefing?.traffic||MAPV,current=()=>m?.getContainer().isConnected&&mapToolsMap()===m;
+  if(!current()||!state.tfc)return;
+  if(m.operations){
+    if(!m.hasLayer(state.tfc.ADSB)||m.getZoom()<7||typeof realArea!=="function")return;
+    const request=state.realRequest=(state.realRequest||0)+1;
+    const rows=await realArea(m).catch(()=>[]);
+    if(!current()||request!==state.realRequest)return;
+    state.realData=rows;
+    state.refresh();
+    return;
+  }
+  const on=["VATSIM","IVAO"].filter(n=>m.hasLayer(state.tfc[n]));if(state.focusReg&&Date.now()-(state.focusAt||(state.focusAt=Date.now()))>6e4){state.focusReg=null;state.focusAt=0}
+  const draw=()=>{if(!current())return;const Lf=window.L,bb=m.getBounds().pad(.2),z=m.getZoom();for(const n of ["VATSIM","IVAO","ADSB"])state.tfc[n].clearLayers();
+    const alSel=state.airline&&state.airline!=="all";
     if(z<4&&!alSel)return;
     /* filtro de companhia: indicativo começando pelo código ICAO dela (ex.: GLO1234, TAM3054) */
-    const al=MAPV.airline&&MAPV.airline!=="all"?MAPV.airline:null,code=al?String(AIRLINE_ICAO[al]||"").toUpperCase():"",re=code?new RegExp("^"+code+"\\d"):null;
-    for(const p of [...(MAPV.tfcData||[]),...(z>=7?MAPV.realData||[]:[])]){const g=MAPV.tfc[p.net==="REAL"?"ADSB":p.net];if(!g||!m.hasLayer(g)||!bb.contains([p.lat,p.lon]))continue;
+    const al=state.airline&&state.airline!=="all"?state.airline:null,code=al?String(AIRLINE_ICAO[al]||"").toUpperCase():"",re=code?new RegExp("^"+code+"\\d"):null;
+    for(const p of [...(state.tfcData||[]),...(z>=7?state.realData||[]:[])]){const g=state.tfc[p.net==="REAL"?"ADSB":p.net];if(!g||!m.hasLayer(g)||!bb.contains([p.lat,p.lon]))continue;
       if(al&&!(re&&re.test(String(p.cs||"").toUpperCase())))continue;
-      const mk=Lf.marker([p.lat,p.lon],{icon:tfcIcon(Lf,p,p.net==="VATSIM"?"vat":p.net==="IVAO"?"ivao":"real",z),zIndexOffset:p.reg&&p.reg===MAPV.focusReg?1500:0}).bindTooltip(p.net==="REAL"&&typeof realTip==="function"?realTip(p):tfcTip(p)).addTo(g);
+      const mk=Lf.marker([p.lat,p.lon],{icon:tfcIcon(Lf,p,p.net==="VATSIM"?"vat":p.net==="IVAO"?"ivao":"real",z),zIndexOffset:p.reg&&p.reg===state.focusReg?1500:0}).bindTooltip(p.net==="REAL"&&typeof realTip==="function"?realTip(p):tfcTip(p)).addTo(g);
       if(typeof flightInfoBind==='function')flightInfoBind(mk,flightInfoTraffic(p));
-      if(p.reg&&p.reg===MAPV.focusReg)setTimeout(()=>mk.openTooltip(),50)}};
-  const alSel=MAPV.airline&&MAPV.airline!=="all",pre=alSel?String(AIRLINE_ICAO[MAPV.airline]||"").toUpperCase():"";
+      if(p.reg&&p.reg===state.focusReg)setTimeout(()=>mk.openTooltip(),50)}};
+  const alSel=state.airline&&state.airline!=="all",pre=alSel?String(AIRLINE_ICAO[state.airline]||"").toUpperCase():"";
   draw();
   /* tráfego real (ADS-B): só com o mapa aproximado */
-  if(m.hasLayer(MAPV.tfc.ADSB)&&m.getZoom()>=7&&typeof realArea==="function"){realArea(m).then(l=>{MAPV.realData=l;draw()})}
+  if(m.hasLayer(state.tfc.ADSB)&&m.getZoom()>=7&&typeof realArea==="function"){realArea(m).then(l=>{if(current()){state.realData=l;draw()}})}
   if(!on.length||(m.getZoom()<4&&!alSel)||(alSel&&!pre))return;
-  const now=Date.now();if(!force&&now-mapTfcAt<15e3)return;if(mapTfcBusy)return;mapTfcBusy=true;mapTfcAt=now;
+  const now=Date.now();if(!force&&now-state.tfcAt<15e3)return;if(state.tfcBusy)return;state.tfcBusy=true;state.tfcAt=now;
   try{const bb=m.getBounds().pad(.3);const {data:d,error}=await sb.functions.invoke("traffic",{body:{bbox:m.getZoom()<4?[-90,-180,90,180]:[bb.getSouth(),bb.getWest(),bb.getNorth(),bb.getEast()],nets:on,...(pre?{prefix:pre}:{})}});
-    if(!error)MAPV.tfcData=(d&&d.pilots)||[];else if(/not found|404|Failed to send|FunctionsFetchError|FunctionsHttpError/i.test(String(error.message||error)))toast(t("brf_m_tfc_missing"))}catch(e){}finally{mapTfcBusy=false}
+    if(!current())return;if(!error)state.tfcData=(d&&d.pilots)||[];else if(/not found|404|Failed to send|FunctionsFetchError|FunctionsHttpError/i.test(String(error.message||error)))toast(t("brf_m_tfc_missing"))}catch(e){}finally{state.tfcBusy=false}
   draw()}
-setInterval(()=>{if(view==="map"&&MAPV.map&&!document.hidden)mapTraffic()},20e3);
+setInterval(()=>{if((view==="map"||view==="briefing"&&BRF.section==="map")&&!document.hidden)mapTraffic()},20e3);
 
 /* ---------- seletor de companhia com o ícone de cada uma (substitui o menu suspenso comum) ---------- */
 const ALP={};
@@ -593,8 +638,7 @@ document.addEventListener("click",e=>{
   if(b.dataset.action==="alpick-open"){const pop=box.querySelector(".alpick-pop"),open=pop.hidden;alPickClose();if(!open)return;
     pop.hidden=false;b.setAttribute("aria-expanded","true");const q=pop.querySelector(".alpick-q");q.value="";pop.querySelector(".alpick-list").innerHTML=alPickList(k,"");
     const on=pop.querySelector(".alpick-o.on");if(on)on.scrollIntoView({block:"nearest"});setTimeout(()=>q.focus(),0);return}
-  const v=b.dataset.v;alPickClose();if(k==="map"){MAPV.airline=v;MAPV.tfcData=[];mapTfcAt=0;render();setTimeout(()=>mapTraffic(true),400)}
-  else if(k==="brief-map"){BRF.mapAirline=v;render();setTimeout(()=>brfTraffic(true),400)}
+  const v=b.dataset.v;alPickClose();if(k==="map"){MAPV.airline=v;MAPV.tfcData=[];MAPV.tfcAt=0;render();setTimeout(()=>mapTraffic(true),400)}
   else if(k==="rs"&&typeof ACP!=="undefined"){ACP.rs.al=v;RS.touched=true;ACP.rs.q="";const a=acById(RS.ac);if(!a||a.airline!==v)RS.ac="";RS.roster=null;render();setTimeout(()=>acPickOpen("rs",true),0)}
   else if(typeof ACP!=="undefined"&&ACP[k]){ACP[k].al=v;box.outerHTML=alPickHTML(k,v);   /* escala/reserva: filtra o seletor de aeronave e já o abre */
     ACP[k].q="";const cur=acById(acpSel(k));if(v!=="all"&&cur&&cur.airline!==v){acPickRefresh(k)}setTimeout(()=>acPickOpen(k,true),0)}});

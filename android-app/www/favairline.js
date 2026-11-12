@@ -2,19 +2,18 @@
    Escolhida no cadastro (piloto de companhia) e alterável no Perfil. */
 const FA_T={
  fa_label:["Favorite airline","Companhia favorita","Aerolínea favorita","Compagnie préférée","Lieblings-Airline","お気に入りの航空会社","最喜欢的航空公司","즐겨 찾는 항공사"],
- fa_hint:["Optional. It comes pre-selected in the Roster, Fleet and Map; you can still fly any airline.","Opcional. Ela já vem selecionada na Escala, na Frota e no Mapa; você continua podendo voar por qualquer companhia.","Opcional. Viene preseleccionada en la Escala, la Flota y el Mapa; puedes seguir volando con cualquier aerolínea.","Facultatif. Elle est présélectionnée dans la Rotation, la Flotte et la Carte ; vous pouvez toujours voler pour n’importe quelle compagnie.","Optional. Sie ist in Umlauf, Flotte und Karte vorausgewählt; du kannst weiterhin jede Airline fliegen.","任意。ロスター、フリート、地図で最初から選択されます。どの航空会社でも引き続き飛べます。","可选。在排班、机队和地图中默认选中;你仍可驾驶任何航空公司。","선택 사항. 스케줄, 기단, 지도에서 미리 선택됩니다. 다른 항공사도 계속 비행할 수 있습니다."],
- fa_rpl_only:["Showing only {al} flights","Mostrando só os voos da {al}","Mostrando solo los vuelos de {al}","Seuls les vols {al} sont affichés","Nur Flüge von {al}","{al} の便のみ表示","仅显示 {al} 的航班","{al} 항공편만 표시"],
- fa_rpl_all:["See all airlines","Ver todas as companhias","Ver todas las aerolíneas","Voir toutes les compagnies","Alle Airlines anzeigen","すべての航空会社を表示","查看所有航空公司","모든 항공사 보기"],
- fa_rpl_allon:["Showing all airlines","Mostrando todas as companhias","Mostrando todas las aerolíneas","Toutes les compagnies sont affichées","Alle Airlines","すべての航空会社を表示中","显示所有航空公司","모든 항공사 표시 중"],
- fa_rpl_back:["Only {al}","Só a {al}","Solo {al}","Seulement {al}","Nur {al}","{al} のみ","仅 {al}","{al}만"],
- fa_rpl_none:["No {al} departure from here in this window. {n} flights from other airlines are available.","Nenhuma saída da {al} daqui nesta janela. Há {n} voos de outras companhias.","Ninguna salida de {al} desde aquí en este intervalo. Hay {n} vuelos de otras aerolíneas.","Aucun départ {al} d’ici dans ce créneau. {n} vols d’autres compagnies sont disponibles.","Kein Abflug von {al} hier in diesem Zeitfenster. {n} Flüge anderer Airlines verfügbar.","この時間帯にここから出発する {al} の便はありません。他社の便が {n} 便あります。","此时段没有从这里出发的 {al} 航班。其他航空公司有 {n} 个航班。","이 시간대에 여기서 출발하는 {al} 항공편이 없습니다. 다른 항공사 항공편 {n}편이 있습니다."],
+ fa_hint:["Optional. It comes pre-selected in the Roster and Fleet; you can still fly any airline.","Opcional. Ela já vem selecionada na Escala e na Frota; você continua podendo voar por qualquer companhia.","Opcional. Viene preseleccionada en la Escala y la Flota; puedes seguir volando con cualquier aerolínea.","Facultatif. Elle est présélectionnée dans la Rotation et la Flotte ; vous pouvez toujours voler pour n’importe quelle compagnie.","Optional. Sie ist in Umlauf und Flotte vorausgewählt; du kannst weiterhin jede Airline fliegen.","任意。ロスターとフリートで最初から選択されます。メレもどの航空会社でも引き続き飛べます。","可选。在排班和机队中默认选中;你仍可驾驶任何航空公司。","선택 사항. 스케줄과 기단에서 미리 선택됩니다. 다른 항공사도 계속 비행할 수 있습니다."],
  fa_colors:["Use my favorite airline's colours in the menus","Usar as cores da companhia favorita nos menus","Usar los colores de la aerolínea favorita en los menús","Utiliser les couleurs de la compagnie préférée dans les menus","Farben der Lieblings-Airline in den Menüs verwenden","メニューにお気に入り航空会社の色を使う","菜单使用最喜欢的航空公司的配色","메뉴에 즐겨 찾는 항공사 색상 사용"],
  fa_colors_h:["The side menu, buttons and highlights take on the airline's colours. Light and dark themes keep working.","O menu lateral, os botões e os destaques ganham as cores da companhia. Os temas claro e escuro continuam funcionando.","El menú lateral, los botones y los destacados toman los colores de la aerolínea. Los temas claro y oscuro siguen funcionando.","Le menu latéral, les boutons et les mises en avant prennent les couleurs de la compagnie. Les thèmes clair et sombre restent disponibles.","Seitenmenü, Schaltflächen und Hervorhebungen übernehmen die Farben der Airline. Helles und dunkles Design funktionieren weiter.","サイドメニュー、ボタン、強調表示が航空会社の色になります。ライト／ダークテーマはそのまま使えます。","侧边菜单、按钮和高亮将采用航空公司的配色。浅色和深色主题仍可使用。","사이드 메뉴, 버튼, 강조 표시가 항공사 색상으로 바뀝니다. 밝은/어두운 테마는 그대로 사용할 수 있습니다."],
  fa_none:["No favorite","Sem favorita","Sin favorita","Aucune","Keine","なし","无","없음"]
 };
 const fat=(k,v)=>{const r=FA_T[k];let x=r?(r[LANGS.indexOf(lang)]||r[0]):k;if(v)for(const n in v)x=x.split("{"+n+"}").join(v[n]);return x};
-const myFavColors=()=>!!(session&&session.user&&session.user.user_metadata&&session.user.user_metadata.fav_colors);
-const myFavAirline=()=>{const v=session&&session.user&&session.user.user_metadata&&session.user.user_metadata.fav_airline;return typeof v==="string"?v:""};
+const myFavColors=()=>!!myFavAirline()&&!!session?.user?.user_metadata?.fav_colors;
+const myFavAirline=()=>{
+  if(typeof flIsFree==="function"&&flIsFree())return "";
+  const v=session?.user?.user_metadata?.fav_airline;
+  return typeof v==="string"?v:"";
+};
 function faAirlines(){const set=new Set(Object.keys(typeof AIRLINE_ICAO!=="undefined"?AIRLINE_ICAO:{}));
   if(typeof fleet!=="undefined")for(const a of fleet)if(a.airline)set.add(a.airline);set.delete("LATAM");
   const R=typeof regionsSorted==="function"?regionsSorted():[],g={};
@@ -66,38 +65,21 @@ if(typeof sheetMySims==="function"){const faSheetOrig=sheetMySims;sheetMySims=fu
     netProfileValues=function(){const o=nv.apply(this,arguments)||{};const el=document.getElementById("ms-fav");if(el){o.fav_airline=el.value;const ck=document.getElementById("ms-fav-colors");if(ck)o.fav_colors=!!ck.checked;FA.applied=""}return o}}
 })();
 
-/* usar: a favorita já vem selecionada na Escala, na Frota e no Mapa (uma vez por sessão; o piloto pode trocar) */
+/* usar: a favorita já vem selecionada na Escala e na Frota (uma vez por sessão; o piloto pode trocar) */
 const FA={applied:""};
 function faApply(){const fav=myFavAirline();if(!fav||!session||FA.applied===myId+"|"+fav)return;
-  if(typeof FL!=="undefined"&&FL.mode==="freelancer")return;
   if(typeof loaded==="undefined"||!loaded.aircraft||typeof fleet==="undefined"||!fleet.some(a=>a.airline===fav))return;
   FA.applied=myId+"|"+fav;
   if(typeof ACP!=="undefined"&&ACP.rs&&ACP.rs.al==="all")ACP.rs.al=fav;
   if(typeof fAirline!=="undefined"&&fAirline==="all"){if(typeof regionOf==="function")fRegion=regionOf(fav);fAirline=fav;if(typeof fleetGeoVersion!=="undefined")fleetGeoVersion++}
-  if(typeof MAPV!=="undefined"&&MAPV.airline==="all")MAPV.airline=fav}
+}
 /* Escala livre: ao entrar nela (vindo da Escala RPL, por qualquer caminho) a Escala zera a companhia;
    a favorita volta a vir selecionada. Detecta a troca de modo a cada render, sem depender do clique. */
 function faFreeApply(){if(typeof RS==="undefined")return;const was=FA.lastOther;FA.lastOther=!!RS.other;
   if(!RS.other||was===true)return;const fav=myFavAirline();
-  if(!fav||typeof FL!=="undefined"&&FL.mode==="freelancer"||RS.ac||typeof ACP==="undefined"||!ACP.rs||ACP.rs.al!=="all")return;
+  if(!fav||RS.ac||typeof ACP==="undefined"||!ACP.rs||ACP.rs.al!=="all")return;
   if(typeof fleet!=="undefined"&&fleet.some(a=>a.airline===fav))ACP.rs.al=fav}
 if(typeof render==="function"){const faRender=render;render=function(){faApply();faFreeApply();faWatchChoice();faTheme();return faRender.apply(this,arguments)}}
-
-/* voos RPL da Escala: só os da favorita, com "Ver todas as companhias" (o filtro não mexe no mapa nem na regra do modo RPL) */
-FA.rplAll=false;
-const faRplFav=()=>{const fav=myFavAirline();if(!fav||FA.rplAll||typeof FL!=="undefined"&&FL.mode==="freelancer")return"";return typeof fleet!=="undefined"&&fleet.some(a=>a.airline===fav)?fav:""};
-function faRplBar(fav,on,total){if(!myFavAirline()||typeof FL!=="undefined"&&FL.mode==="freelancer")return"";const al=esc(myFavAirline());
-  return`<div class="fa-rpl-bar">${faSym(myFavAirline())}<span>${on?fat("fa_rpl_only",{al}):fat("fa_rpl_allon")}</span><button type="button" class="btn small" data-action="fa-rpl-all">${on?fat("fa_rpl_all"):fat("fa_rpl_back",{al})}</button></div>`}
-if(typeof rsPfHTML==="function"){const faPf=rsPfHTML;rsPfHTML=function(list){const fav=faRplFav();
-  if(typeof opsRosterAirline==="function"&&opsRosterAirline())return faPf.call(this,list);
-  if(!fav)return(FA.rplAll&&myFavAirline()?faRplBar("",false):"")+faPf.call(this,list);
-  const mine=list.filter(x=>x.al===fav);
-  if(!mine.length)return faRplBar(fav,true)+`<div class="fa-rpl-none"><p>${fat("fa_rpl_none",{al:esc(fav),n:list.length})}</p></div>`;
-  return faRplBar(fav,true)+faPf.call(this,RS.pf&&!mine.some(x=>pfKey(x)===pfKey(RS.pf))?[RS.pf,...mine]:mine)}}
-/* contagem "X voos RPL" do aeródromo segue o mesmo filtro */
-if(typeof rsDepInfoHTML==="function"){const faDi=rsDepInfoHTML;rsDepInfoHTML=function(){const fav=faRplFav();if(!fav)return faDi.apply(this,arguments);
-  const orig=rsSoonFlights;rsSoonFlights=d=>{const l=orig(d),m=l.filter(x=>x.al===fav);return m.length?m:l};try{return faDi.apply(this,arguments)}finally{rsSoonFlights=orig}}}
-document.addEventListener("click",e=>{if(!e.target.closest('[data-action="fa-rpl-all"]'))return;e.preventDefault();FA.rplAll=!FA.rplAll;if(typeof rsRepaintDep==="function"&&document.getElementById("rs-acf"))rsRepaintDep();else render()});
 
 /* cores da companhia favorita nos menus (opcional): variáveis de cor aplicadas no :root, respeitando o tema claro/escuro */
 const FA_VARS=["--accent","--accent-ink","--on-accent","--accent-soft","--side","--side-ink","--side-muted","--side-hi","--side-line","--side-title","--side-acc"];

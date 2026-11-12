@@ -8,6 +8,7 @@
 (function(){
  if(typeof viewFleet!=="function")return;
  const T={
+  airNoneAll:["No flights in the air right now.","Nenhum voo no ar agora.","No hay vuelos en el aire ahora.","Aucun vol en cours.","Derzeit sind keine Flüge in der Luft.","現在飛行中の便はありません。","目前没有航班在飞行。","현재 비행 중인 항공편이 없습니다."],
   nav:["Operations","Operações","Operaciones","Opérations","Betrieb","運航","运营","운항"],
   k:["Operations center","Central de operações","Centro de operaciones","Centre des opérations","Betriebszentrale","運航センター","运营中心","운항 센터"],
   sub:["{n} aircraft in the virtual fleet · updated {t}","{n} aeronaves na frota virtual · atualizado {t}","{n} aeronaves en la flota virtual · actualizado {t}","{n} avions dans la flotte virtuelle · mis à jour {t}","{n} Flugzeuge in der virtuellen Flotte · aktualisiert {t}","仮想機材 {n} 機 · 更新 {t}","虚拟机队 {n} 架 · 更新于 {t}","가상 기단 {n}대 · {t} 업데이트"],
@@ -60,19 +61,35 @@
   see:["see","ver","ver","voir","ansehen","見る","查看","보기"],
   map:["Open map","Abrir mapa","Abrir mapa","Ouvrir la carte","Karte öffnen","地図を開く","打开地图","지도 열기"],
   gnd:["on the ground","no solo","en tierra","au sol","am Boden","地上","在地面","지상"],
-  netNote:["VATSIM/IVAO appear live; in the replay only what was seen while this screen was open.","VATSIM/IVAO aparecem ao vivo; no replay, só o que foi visto com esta tela aberta.","VATSIM/IVAO aparecen en vivo; en la repetición, solo lo visto con esta pantalla abierta.","VATSIM/IVAO en direct ; dans le replay, seulement ce qui a été vu écran ouvert.","VATSIM/IVAO live; im Replay nur, was bei geöffneter Ansicht gesehen wurde.","VATSIM/IVAO はライブ表示。リプレイには画面を開いていた間の分のみ。","VATSIM/IVAO 实时显示；回放中只有此页面打开时看到的数据。","VATSIM/IVAO는 실시간이며, 리플레이에는 이 화면을 연 동안 본 것만 나옵니다."]};
+  netNote:["VATSIM/IVAO appear live.","VATSIM/IVAO aparecem ao vivo.","VATSIM/IVAO aparecen en vivo.","VATSIM/IVAO en direct.","VATSIM/IVAO live.","VATSIM/IVAO はライブ表示。","VATSIM/IVAO 实时显示。","VATSIM/IVAO는 실시간으로 표시됩니다."]};
  const ot=(k,p)=>{let s=(T[k][LANGS.indexOf(lang)]||T[k][0]);if(p)for(const x in p)s=s.split("{"+x+"}").join(p[x]);return s};
  if(typeof L!=="undefined")L.nav_ops=T.nav;
  if(typeof NAV_ICON!=="undefined"&&typeof _ic==="function")NAV_ICON.ops=_ic('<circle cx="12" cy="12" r="8.5"/><path d="M12 12l5-3"/><path d="M12 3.5v2M20.5 12h-2M12 20.5v-2M3.5 12h2"/><circle cx="12" cy="12" r="1.3"/>');
  const M=6e4,H=36e5,W=7*864e5;
- const O={al:null,mode:"now",t:null,play:false,speed:300,map:null,lay:null,raf:0,last:0,net:[],netAt:0,netBusy:false,hist:{},center:null,zoom:null,fit:false};
+ const O={al:null,mode:"now",t:null,play:false,speed:300,map:null,lay:null,raf:0,last:0,net:[],netAt:0,netBusy:false,hist:{},center:null,zoom:null,fit:false,selected:null,markers:new Map()};
  const eobt=r=>r.start+(r.rosterId?20*M:0),eta=r=>r.end-(r.rosterId?25*M:0);
  const ll=c=>{try{const a=AIRPORTS&&AIRPORTS[c];return a?[a[0],a[1]]:null}catch(e){return null}};
  const utc=ms=>{const d=new Date(ms);return`${String(d.getUTCHours()).padStart(2,"0")}:${String(d.getUTCMinutes()).padStart(2,"0")}Z`};
  const hmm=m=>`${Math.floor(m/60)}:${String(Math.round(m%60)).padStart(2,"0")}`;
  const alNow=()=>{const favorite=typeof myFavAirline==="function"?myFavAirline():"";return O.al=favorite||""};
- const ofAl=al=>{const ids=new Set(fleet.filter(a=>a.airline===al).map(a=>a.id));return ids};
+ const isFreelancer=()=>typeof flIsFree==="function"&&flIsFree();
+ const ofAl=al=>new Set(fleet.filter(a=>isFreelancer()||a.airline===al).map(a=>a.id));
  const icao=al=>String((typeof AIRLINE_ICAO!=="undefined"&&AIRLINE_ICAO[al])||"").toUpperCase();
+ const liveAirline=()=>O.liveAirline||"all";
+ const aircraftMatches=(a,al)=>al==="all"||a?.airline===al||!!icao(al)&&icao(a?.airline)===icao(al);
+ const airlineMatches=(p,al)=>{
+  if(al==="all")return true;
+  const code=icao(al),callsign=String(p.cs||"").toUpperCase();
+  return !!code&&callsign.startsWith(code)&&/^\d/.test(callsign.slice(code.length));
+ };
+ function liveAirlineOptions(){
+  const selected=liveAirline(),options=new Set([...Object.keys(AIRLINE_ICAO),...Object.values(fleetById).map(a=>a.airline).filter(Boolean)]);
+  options.delete("LATAM"); // alias de LATAM Brasil
+  const airlines=[...options].sort((a,b)=>a.localeCompare(b,lang));
+  return `<div class="op-airline-filter"><span id="op-live-airline-icon" aria-hidden="true">${selected==="all"?"":alSym(selected)}</span><select id="op-live-airline" aria-label="${esc(t("airline"))}">
+   <option value="all">${esc(t("all_airlines"))}</option>
+   ${airlines.map(al=>`<option value="${esc(al)}"${al===selected?" selected":""}>${esc(al)}</option>`).join("")}</select></div>`;
+ }
  function pal(al){const Lv=(typeof LIVERY!=="undefined"&&LIVERY[al])||["#13202E","#2C4A6B"];let [a,b]=Lv;b=b||a;if(typeof faContrast!=="function")return{a,b,ink:"#fff"};
   const w=Math.min(faContrast(a,"#ffffff"),faContrast(b,"#ffffff")),k=Math.min(faContrast(a,"#111111"),faContrast(b,"#111111")),ink=w>=k?"#ffffff":"#111111";
   const fix=c=>{let x=c,s=0;while(faContrast(x,ink)<4.5&&s<1){s+=.05;x=faMix(c,ink==="#ffffff"?"#000000":"#ffffff",s)}return x};return{a:fix(a),b:fix(b),ink}}
@@ -101,11 +118,7 @@
    const {code,number,dep,arr,std}=button.dataset;
    const option=departureOption(code,number,dep,arr,Number(std),rsSoonFlights(dep));
    if(!option.flight){toast(option.reason);return}
-   const flight=option.flight,planes=rsPfAircraft(flight);
-   Object.assign(RS,{other:false,dep,depSet:true,pf:flight,start:flight.f.std,roster:null,err:"",touched:true,
-     favoriteContext:null,ac:planes.find(a=>isFav(a.id))?.id||(planes.length===1?planes[0].id:"")});
-   ACP.rs.al=flight.al;ACP.rs.q="";
-   rsSave();view="roster";render();window.scrollTo(0,0);
+   rsOpenRpl(option.flight);
  });
  function rplLegs(al,from,to){const c=icao(al);if(typeof SCHED==="undefined"||!SCHED||!SCHED.idx||!SCHED.idx[c]||typeof realDeps!=="function")return[];const out=[];
   for(const apt in SCHED.idx[c])for(const d of realDeps(c,apt,from,to))out.push({reg:d.fno,dep:d.dep,arr:d.arr,t0:d.std,t1:d.sta,src:"rpl",typ:d.typ});
@@ -113,26 +126,146 @@
  function range(){const now=Date.now();return O.mode==="rpl"?[now,now+6*H]:O.mode==="rep"?[now-24*H,now]:[now,now]}
  function legsNow(){const al=alNow(),[a,b]=range();if(O.mode==="rpl")return rplLegs(al,a,b);if(O.mode==="rep")return vfrLegs(al,a,b);return vfrLegs(al,Date.now()-12*H,Date.now()+H).filter(l=>l.live)}
  /* rede: amostras guardadas enquanto a tela está aberta (para o replay) */
- async function netFetch(force){const al=alNow(),pre=icao(al);if(!pre||!sb||O.netBusy)return;if(!force&&Date.now()-O.netAt<30e3)return;O.netBusy=true;O.netAt=Date.now();
-  try{const {data:d,error}=await sb.functions.invoke("traffic",{body:{bbox:[-90,-180,90,180],nets:["VATSIM","IVAO"],prefix:pre}});
-   if(!error){O.net=((d&&d.pilots)||[]).filter(p=>new RegExp("^"+pre+"\\d").test(String(p.cs||"").toUpperCase()));const now=Date.now();
-    for(const p of O.net){const h=O.hist[p.cs]=O.hist[p.cs]||[];h.push({t:now,lat:p.lat,lon:p.lon,hdg:p.hdg,net:p.net,ground:p.ground});if(h.length>400)h.shift()}}}catch(e){}finally{O.netBusy=false}
-  if((view==="ops"||view==="roster")){paintLists();draw()}}
+ async function netFetch(){if(!sb||O.netBusy||Date.now()-O.netAt<30e3)return;O.netBusy=true;O.netAt=Date.now();
+  try{
+   const nets=["VATSIM","IVAO"],bbox=[-90,-180,90,180];
+   const {data,error}=await sb.functions.invoke("traffic",{body:{bbox,nets}});
+   O.net=error?[]:data?.pilots||[];
+   // The feed caps a response at 1,500 entries. Give each network its own window if the combined feed fills up.
+   if(O.net.length===1500){
+    const results=await Promise.allSettled(nets.map(net=>sb.functions.invoke("traffic",{body:{bbox,nets:[net]}})));
+    O.net=results.flatMap((result,i)=>result.status==="fulfilled"&&!result.value.error
+      ?result.value.data?.pilots||[]:O.net.filter(p=>p.net===nets[i]));
+   }
+   const now=Date.now(),favorite=alNow();
+   for(const p of O.net){if(!airlineMatches(p,favorite))continue;const h=O.hist[p.cs]=O.hist[p.cs]||[];h.push({t:now,lat:p.lat,lon:p.lon,hdg:p.hdg,net:p.net,ground:p.ground});if(h.length>400)h.shift()}
+  }catch(e){O.net=[]}finally{O.netBusy=false}
+  if(view==="ops")draw()}
  /* ---------- mapa ---------- */
- const COL={vfr:"#F5B800",VATSIM:"#5AA0FF",IVAO:"#A99BFF",rpl:"#4FD1A5"};
+ const COL={vfr:"#F5B800",VATSIM:"#5AA0FF",IVAO:"#A99BFF",rpl:"#4FD1A5",ADSB:"#44C7A5"};
  const PL=`<svg viewBox="-12 -12 24 24" width="24" height="24"><path d="M0 -10 L2.2 -2 L10 2.5 L10 4.5 L2.2 2.4 L1.6 7.5 L4.4 9.6 L4.4 11 L0 9.8 L-4.4 11 L-4.4 9.6 L-1.6 7.5 L-2.2 2.4 L-10 4.5 L-10 2.5 L-2.2 -2Z" fill="COL" stroke="#0b1825" stroke-width="1"/></svg>`;
  const brg=(a,b)=>{const dx=(b[1]-a[1])*Math.cos((a[0]+b[0])/2*Math.PI/180),dy=b[0]-a[0];return Math.atan2(dx,dy)*180/Math.PI};
  function pIcon(Lf,col,ang,lab){return Lf.divIcon({className:"op-pl",html:`<div style="transform:rotate(${Math.round(ang)}deg)">${PL.replace("COL",col)}</div>${lab?`<span>${esc(lab)}</span>`:""}`,iconSize:[24,24],iconAnchor:[12,12]})}
- function counts(t){const al=alNow(),ids=ofAl(al),cnt={},aog={};
+ function counts(t){const al=O.mode==="now"?liveAirline():alNow(),cnt={},aog={};
+  const ids=O.mode==="now"?Object.values(fleetById).filter(a=>aircraftMatches(a,al)).map(a=>a.id):ofAl(al);
+  const flying=O.mode==="now"?liveAcIds():new Set(vfrLegs(al,t-24*H,t+H).filter(l=>l.t0<=t&&l.t1>t).map(l=>l.ac));
   for(const id of ids){let at=null;try{at=t>=Date.now()-60e3?(posNow(id)||locAt(id,t)):locAt(id,t)}catch(e){}if(!at)continue;
-   const busy=O.mode!=="rpl"&&vfrLegs(al,t-24*H,t+H).some(l=>l.ac===id&&l.t0<=t&&l.t1>t);if(busy)continue;
+   if(flying.has(id))continue;
    cnt[at]=(cnt[at]||0)+1;try{if(statusOf(id).key==="bad")aog[at]=(aog[at]||0)+1}catch(e){}}
   return{cnt,aog}}
- function draw(){const m=O.map,Lf=window.L;if(!m||!O.lay||!Lf)return;O.lay.clearLayers();const t=O.t||Date.now(),legs=legsNow(),z=m.getZoom(),nAir=legs.filter(l=>l.t0<=t&&l.t1>t).length,lab=z>=6||nAir<=14;
+ const networkFlightKey=p=>JSON.stringify([p.net,p.cs,p.cid??p.id??p.reg??""]);
+ function liveFlights(m){
+  const ops=m.operations,tools=MAP_TOOLS,al=liveAirline(),out=[];
+  if(tools.layers.live&&m.hasLayer(tools.layers.live)){
+   for(const k of liveTracks()){
+    if(k.last_ground||!Number.isFinite(k.last_lat)||!Number.isFinite(k.last_lon))continue;
+    const {a,r,reg,fno}=liveInfo(k);
+    if(!aircraftMatches(a,al))continue;
+    const {dep,arr}=r||{};
+    out.push({key:JSON.stringify(["vfr",k.id||k.reservation_id]),net:"vfr",label:"VFR",callsign:reg,dep,arr,
+      info:{source:"VFR",callsign:fno,registration:reg,airline:a?.airline,type:a?.type,dep,arr,lat:k.last_lat,lon:k.last_lon,hdg:k.last_hdg,alt:k.last_alt,gs:k.last_gs},
+      detail:[names[k.pilot_id],k.last_alt!=null?Math.round(k.last_alt).toLocaleString(lang)+" ft · "+Math.round(k.last_gs||0)+" kt":"",k.source].filter(Boolean).join(" · ")});
+   }
+  }
+  const bounds=m.getBounds().pad(.2),center=m.getCenter().lng;
+  const real=m.getZoom()>=7&&m.hasLayer(ops.tfc.ADSB)?(ops.realData||[]).filter(p=>bounds.contains([p.lat,p.lon+360*Math.round((center-p.lon)/360)])):[];
+  for(const p of [...O.net,...real]){
+   const net=p.net==="REAL"?"ADSB":p.net,layer=ops.tfc[net];
+   if(p.ground||!p.cs||!layer||!m.hasLayer(layer)||!Number.isFinite(p.lat)||!Number.isFinite(p.lon)||!airlineMatches(p,al))continue;
+   const detail=[p.type,p.alt!=null?"FL"+String(Math.round(p.alt/100)).padStart(3,"0"):"",p.gs!=null?Math.round(p.gs)+" kt":""].filter(Boolean).join(" · ");
+   out.push({key:networkFlightKey(p),net,label:net==="ADSB"?"ADS-B":net,callsign:p.cs,dep:p.dep,arr:p.arr,detail,info:flightInfoTraffic(p)});
+  }
+  return [...new Map(out.map(f=>[f.key,f])).values()];
+ }
+ function paintAirList(flights){
+  const box=document.getElementById("op-air");if(!box)return;
+  const html=flights.length?flights.map(f=>`<button type="button" class="op-r op-flight" data-op-flight="${esc(f.key)}" aria-pressed="false"><span class="op-src ${f.net==="VATSIM"?"vat":esc(f.net.toLowerCase())}">${esc(f.label)}</span><span><b class="mono">${esc(f.callsign)}</b> <span class="mono">${esc(f.dep||"?")} → ${esc(f.arr||"?")}</span><small>${esc(f.detail)}</small></span></button>`).join(""):`<p class="muted">${esc(O.netBusy||!O.netAt?t("loading_networks"):ot(liveAirline()==="all"?"airNoneAll":"airNone"))}</p>`;
+  if(box.opFlightsHTML===html)return;
+  const focused=box.contains(document.activeElement)?document.activeElement.dataset.opFlight:null;
+  box.opFlightsHTML=html;
+  box.innerHTML=html;
+  if(focused)[...box.querySelectorAll("[data-op-flight]")].find(row=>row.dataset.opFlight===focused)?.focus({preventScroll:true});
+ }
+ function syncFlightSelection(reveal=false){
+  const box=document.getElementById("op-air");
+  for(const row of box?.querySelectorAll("[data-op-flight]")||[]){
+   const selected=row.dataset.opFlight===O.selected;
+   row.setAttribute("aria-pressed",String(selected));
+   if(selected&&reveal){
+    const pane=box.closest("[data-op-pane]"),bounds=pane.getBoundingClientRect(),rect=row.getBoundingClientRect();
+    if(rect.top<bounds.top)pane.scrollTop+=rect.top-bounds.top-6;
+    else if(rect.bottom>bounds.bottom)pane.scrollTop+=rect.bottom-bounds.bottom+6;
+   }
+  }
+  for(const [key,marker] of O.markers){
+   const selected=key===O.selected;
+   marker.setZIndexOffset(selected?1800:500);
+   marker.getElement()?.classList.toggle("op-flight-selected",selected);
+   marker.getElement()?.setAttribute("aria-pressed",String(selected));
+  }
+ }
+ function selectFlight(key,fromList=false){
+  const marker=O.markers.get(key);if(!marker||!O.map)return;
+  O.selected=key;
+  syncFlightSelection(!fromList);
+  if(fromList){
+   const m=O.map,pos=marker.getLatLng(),center=m.getCenter();
+   const lon=pos.lng+360*Math.round((center.lng-pos.lng)/360);
+   m.closePopup();
+   m.panTo([pos.lat,lon],{animate:false});
+  }
+ }
+ document.addEventListener("click",event=>{
+  const row=event.target.closest("[data-op-flight]");
+  if(row&&view==="ops")selectFlight(row.dataset.opFlight,true);
+ });
+ document.addEventListener("change",event=>{
+  if(event.target.id!=="op-live-airline"||view!=="ops")return;
+  O.liveAirline=event.target.value;
+  const icon=document.getElementById("op-live-airline-icon");
+  if(icon)icon.innerHTML=liveAirline()==="all"?"":alSym(liveAirline());
+  if(O.map){
+   O.map.operations.airline=liveAirline();
+   draw();
+   if(typeof NET!=="undefined")for(const entry of NET.maps)if(entry.m===O.map)netDraw(entry);
+  }
+ });
+ function draw(){const m=O.map,Lf=window.L;if(!m?.getContainer().isConnected||!O.lay||!Lf)return;const popupOpen=O.markers.get(O.selected)?.isPopupOpen();
+  O.lay.clearLayers();O.markers.clear();
+  if(O.mode==="now")for(const group of [...Object.values(m.operations.tfc),MAP_TOOLS.layers.live])group?.clearLayers();
+  const t=O.t||Date.now(),legs=O.mode==="now"?[]:legsNow(),z=m.getZoom(),nAir=legs.filter(l=>l.t0<=t&&l.t1>t).length,lab=z>=6||nAir<=14;
   const {cnt,aog}=O.mode==="rpl"?{cnt:{},aog:{}}:counts(t);
   for(const c in cnt){const p=ll(c);if(!p)continue;const n=cnt[c],bad=aog[c];
    Lf.circleMarker(p,{radius:4+Math.min(12,n*1.4),color:bad?"#fff":"#7FB4F0",weight:1.2,fillColor:bad?"#B42318":"#2E7DD7",fillOpacity:bad?.9:.4}).bindTooltip(`<b>${esc(c)}</b> · ${n} ${esc(ot("gnd"))}${bad?` · ${bad} AOG`:""}`,{direction:"right",permanent:z>=5,className:"op-tt"}).addTo(O.lay)}
   let air=0,src={vfr:0,VATSIM:0,IVAO:0,rpl:0},landed=0;
+  if(O.mode==="now"){
+   const flights=liveFlights(m);
+   for(const f of flights){
+    const {lat,lon,hdg}=f.info;
+    const point=[lat,lon+360*Math.round((m.getCenter().lng-lon)/360)];
+    const group=f.net==="vfr"?MAP_TOOLS.layers.live:m.operations.tfc[f.net];
+    if(f.net==="vfr"&&!f.info.ground){
+     const origin=ll(f.dep),destination=ll(f.arr),wrap=([lat,lon])=>[lat,lon+360*Math.round((point[1]-lon)/360)];
+     if(origin)Lf.polyline([wrap(origin),point],{color:COL.vfr,weight:2.4,opacity:.9,interactive:false}).addTo(group);
+     if(destination)Lf.polyline([point,wrap(destination)],{color:COL.vfr,weight:1.4,opacity:.55,dashArray:"4 6",interactive:false}).addTo(group);
+    }
+    const label=z>=6||flights.length<=14||f.key===O.selected?f.callsign:"";
+    const marker=Lf.marker(point,{icon:pIcon(Lf,COL[f.net],hdg||0,label),title:f.callsign,zIndexOffset:500}).addTo(group);
+    flightInfoBind(marker,f.info);
+    marker.on("click",()=>selectFlight(f.key));
+    O.markers.set(f.key,marker);
+    if(!f.info.ground){air++;src[f.net]=(src[f.net]||0)+1;}
+   }
+   if(!O.markers.has(O.selected))O.selected=null;
+   paintAirList(flights);
+   syncFlightSelection();
+   if(popupOpen&&O.selected){
+    const marker=O.markers.get(O.selected),popup=marker.getPopup();
+    popup.options.autoPan=false;
+    marker.openPopup();
+    popup.options.autoPan=true;
+   }
+  }else{
   for(const l of legs){const a=ll(l.dep),b=ll(l.arr);if(!a||!b)continue;
    if(l.t1<=t){landed++;const age=t-l.t1;if(age<2*H)Lf.polyline([a,b],{color:COL[l.src],weight:1.5,opacity:.45*(1-age/(2*H)),interactive:false}).addTo(O.lay);continue}
    if(l.t0>t)continue;let pos,hd=null;
@@ -148,34 +281,60 @@
   if(O.mode!=="rpl"){for(const cs in O.hist){const h=O.hist[cs];let s=null;if(O.mode==="now"){const p=O.net.find(x=>x.cs===cs);if(p)s={lat:p.lat,lon:p.lon,hdg:p.hdg,net:p.net,ground:p.ground}}
     else{for(const x of h)if(Math.abs(x.t-t)<=90e3&&(!s||Math.abs(x.t-t)<Math.abs(s.t-t)))s=x}
     if(!s||s.ground)continue;air++;src[s.net]=(src[s.net]||0)+1;Lf.marker([s.lat,s.lon],{icon:pIcon(Lf,COL[s.net]||"#5AA0FF",s.hdg||0,cs)}).bindTooltip(`<b>${esc(cs)}</b> ${esc(s.net)}`).addTo(O.lay)}}
-  const box=document.getElementById("op-cnt");if(box)box.innerHTML=`<span><b>${air}</b>${esc(ot("inAir"))}</span>${O.mode==="rpl"?`<span><b style="color:${COL.rpl}">${src.rpl}</b>RPL</span>`:`<span><b style="color:${COL.vfr}">${src.vfr}</b>VFR</span><span><b style="color:${COL.VATSIM}">${src.VATSIM||0}</b>VATSIM</span><span><b style="color:${COL.IVAO}">${src.IVAO||0}</b>IVAO</span>`}${O.mode!=="now"?`<span><b>${landed}</b>${esc(ot("lands"))}</span>`:""}`;
+  }
+  const box=document.getElementById("op-cnt");if(box)box.innerHTML=`<span><b>${air}</b>${esc(ot("inAir"))}</span>${O.mode==="rpl"?`<span><b style="color:${COL.rpl}">${src.rpl}</b>RPL</span>`:`<span><b style="color:${COL.vfr}">${src.vfr}</b>VFR</span><span><b style="color:${COL.VATSIM}">${src.VATSIM||0}</b>VATSIM</span><span><b style="color:${COL.IVAO}">${src.IVAO||0}</b>IVAO</span>${src.ADSB?`<span><b style="color:${COL.ADSB}">${src.ADSB}</b>ADS-B</span>`:""}`}${O.mode!=="now"?`<span><b>${landed}</b>${esc(ot("lands"))}</span>`:""}`;
   const ck=document.getElementById("op-clock");if(ck)ck.innerHTML=`<b class="mono">${utc(t)}</b><small>${esc(O.mode==="rpl"?ot("planned"):O.mode==="rep"?ot("replay"):ot("live"))}</small>`;
  }
  async function initMap(){const el=document.getElementById("op-map");if(!el)return;
   try{await Promise.all([loadLeaflet(),loadAirports(),typeof loadSchedule==="function"?loadSchedule():null])}catch(e){el.innerHTML=`<div class="map-loading">${esc(t("map_err"))}</div>`;return}
-  if(!el.isConnected)return;el.innerHTML="";if(O.map){try{O.center=O.map.getCenter();O.zoom=O.map.getZoom();O.map.remove()}catch(e){}}
-  const Lf=window.L,m=Lf.map(el,{worldCopyJump:true,minZoom:2,zoomControl:true});O.map=m;
-  const base=typeof brfBaseLayers==="function"?brfBaseLayers(Lf):null;let bk=null;try{bk=localStorage.getItem("vfr-map-base")}catch(e){}
-  if(base)(base[bk]||Object.values(base)[0]).addTo(m);O.lay=Lf.layerGroup().addTo(m);
-  if(O.center)m.setView(O.center,O.zoom);else{const pts=[];for(const id of ofAl(alNow())){const c=posNow(id);const p=c&&ll(c);if(p)pts.push(p)}for(const l of vfrLegs(alNow(),Date.now()-24*H,Date.now()+H))for(const c of [l.dep,l.arr]){const p=ll(c);if(p)pts.push(p)}
-   if(pts.length>1)m.fitBounds(pts,{padding:[30,30],maxZoom:6});else m.setView(pts[0]||[-15,-50],pts.length?6:3)}
-  m.on("zoomend",()=>draw());draw();paintLists();netFetch()}
+  if(!el.isConnected||O.map?.getContainer()===el)return;el.innerHTML="";if(O.map){try{O.center=O.map.getCenter();O.zoom=O.map.getZoom();O.map.remove()}catch(e){}}
+  const Lf=window.L,m=Lf.map(el,{worldCopyJump:true,minZoom:2,maxZoom:19,zoomControl:true});O.map=OPS_LIVE_MAP=m;
+  m.operations={airline:liveAirline(),refresh:()=>{if(O.map===m)draw()},
+   includesNetwork:p=>airlineMatches(p,liveAirline()),selectNetwork:p=>selectFlight(networkFlightKey(p))};
+  O.lay=Lf.layerGroup().addTo(m);
+  if(O.center)m.setView(O.center,O.zoom);else m.setView([15,0],2);
+  mapToolsRestore();
+  const control=initMapLayerControl(m,Lf,brfBaseLayers(Lf));
+  initMapLayerOverlays(m,Lf,control).catch(error=>console.warn("Operations map layers",error));
+  m.on("zoomend",()=>draw());
+  m.on("moveend",()=>{
+   const center=m.getCenter().lng;
+   for(const marker of O.markers.values()){
+    const pos=marker.getLatLng(),lon=pos.lng+360*Math.round((center-pos.lng)/360);
+    if(lon!==pos.lng)marker.setLatLng([pos.lat,lon]);
+   }
+  });
+  m.on("unload",()=>{if(OPS_LIVE_MAP===m)OPS_LIVE_MAP=null});
+  draw();paintLists();netFetch()}
  /* ---------- listas ---------- */
- function paintLists(){const al=alNow(),ids=ofAl(al),now=Date.now();
-  const vfr=vfrLegs(al,now-12*H,now+H).filter(l=>l.live),net=O.net.filter(p=>!p.ground);
-  const box=document.getElementById("op-air");if(box)box.innerHTML=vfr.length||net.length?[...vfr.map(l=>`<div class="op-r"><span class="op-src vfr">VFR</span><div><b class="mono">${esc(l.reg)}</b> <span class="mono">${esc(l.dep)} → ${esc(l.arr)}</span><small>${esc(l.who)}</small><small class="mono">${l.live&&l.live.last_alt!=null?`${Math.round(l.live.last_alt).toLocaleString(lang)} ft · ${Math.round(l.live.last_gs||0)} kt`:""}</small></div><span class="mono muted">${esc(l.live&&l.live.source||"")}</span></div>`),
-   ...net.slice(0,8).map(p=>`<div class="op-r"><span class="op-src ${p.net==="IVAO"?"ivao":"vat"}">${esc(p.net)}</span><div><b class="mono">${esc(p.cs)}</b> <span class="mono">${esc(p.dep||"?")} → ${esc(p.arr||"?")}</span><small>${esc(p.type||"")} · FL${String(Math.round((p.alt||0)/100)).padStart(3,"0")} · ${Math.round(p.gs||0)} kt</small></div><span></span></div>`)].join(""):`<p class="muted">${esc(ot("airNone"))}</p>`;
-  const rb=document.getElementById("op-rpl");if(rb){const c=icao(al),deps=rplLegs(al,...rsRplWindow()).slice(0,5);
-   const byOrigin=new Map();
-   rb.innerHTML=deps.length?deps.map(d=>{
-    if(!byOrigin.has(d.dep))byOrigin.set(d.dep,rsSoonFlights(d.dep));
-    const option=departureOption(c,d.reg,d.dep,d.arr,d.t0,byOrigin.get(d.dep));
-    const action=option.flight?`<button type="button" class="btn small" data-op-start data-code="${esc(c)}" data-number="${esc(d.reg)}" data-dep="${esc(d.dep)}" data-arr="${esc(d.arr)}" data-std="${d.t0}">${esc(ot("startHere"))} ›</button>`:`<small class="muted">${esc(option.reason)}</small>`;
-    return`<div class="op-r op-dep"><b class="mono">${utc(d.t0)}</b><div class="op-dep-flight"><b class="mono">${esc(c)} ${esc(d.reg)}</b><span class="mono op-dep-route">${esc(d.dep)} → ${esc(d.arr)}</span></div><div class="op-dep-state">${d.typ?`<small>${esc(d.typ)}</small>`:""}${option.flight?`<small>${esc(ot("free"))}</small>`:""}${action}</div></div>`}).join(""):`<p class="muted">${esc(ot("rplNone"))}</p>`}paintPanes()}
+ function rplDepartures(){const al=alNow(),code=icao(al);
+  return rplLegs(al,...rsRplWindow()).slice(0,5).map(d=>({...d,code,key:JSON.stringify([code,d.reg,d.dep,d.arr,d.t0])}));
+ }
+ function paintRplList(deps){
+  const box=document.getElementById("op-rpl");if(!box)return;
+  const byOrigin=new Map();
+  const html=deps.length?deps.map(d=>{
+   if(!byOrigin.has(d.dep))byOrigin.set(d.dep,rsSoonFlights(d.dep));
+   const option=departureOption(d.code,d.reg,d.dep,d.arr,d.t0,byOrigin.get(d.dep));
+   const action=option.flight?`<button type="button" class="btn small" data-op-start data-code="${esc(d.code)}" data-number="${esc(d.reg)}" data-dep="${esc(d.dep)}" data-arr="${esc(d.arr)}" data-std="${d.t0}">${esc(ot("startHere"))} ›</button>`:`<small class="muted">${esc(option.reason)}</small>`;
+   return `<div class="op-r op-dep" data-op-rpl-row="${esc(d.key)}">
+    <button type="button" class="op-rpl-select" data-op-rpl-select="${esc(d.key)}" aria-pressed="false">
+     <b class="mono">${utc(d.t0)}</b><span class="op-dep-flight"><b class="mono">${esc(d.code)} ${esc(d.reg)}</b><span class="mono op-dep-route">${esc(d.dep)} → ${esc(d.arr)}</span></span>
+    </button><div class="op-dep-state">${d.typ?`<small>${esc(d.typ)}</small>`:""}${option.flight?`<small>${esc(ot("free"))}</small>`:""}${action}</div></div>`;
+  }).join(""):`<p class="muted">${esc(ot("rplNone"))}</p>`;
+  if(box.opRplHTML!==html){
+   const focused=box.contains(document.activeElement)?document.activeElement.dataset.opRplSelect:null;
+   box.opRplHTML=html;box.innerHTML=html;
+   if(focused)[...box.querySelectorAll("[data-op-rpl-select]")].find(b=>b.dataset.opRplSelect===focused)?.focus({preventScroll:true});
+  }
+  syncRplSelection();
+ }
+ function paintLists(){paintRplList(rplDepartures());paintPanes()}
  function stats(al){const ids=ofAl(al),now=Date.now(),wk=data.flights.filter(f=>ids.has(f.aircraftId)&&counts2(f)&&f.createdAt>=now-W),pw=data.flights.filter(f=>ids.has(f.aircraftId)&&counts2(f)&&f.createdAt>=now-2*W&&f.createdAt<now-W);
   return{wk,pw,min:wk.reduce((x,f)=>x+(f.blockMin||0),0),pilots:new Set(wk.map(f=>f.pilotId)).size}}
  const counts2=f=>f.verified!==false;
- function viewOps(){const al=alNow(),ids=ofAl(al),n=ids.size,P=pal(al),now=Date.now();
+ function viewOps(){const freelancer=isFreelancer(),al=alNow(),ids=ofAl(al),n=ids.size,P=pal(al),now=Date.now();
+  if(O.owner!==myId){O.owner=myId;O.liveAirline="all";O.selected=null;O.hist={}}
   if(typeof AIRPORTS!=="undefined"&&!AIRPORTS&&typeof loadAirports==="function"&&!viewOps.ap){viewOps.ap=1;loadAirports().then(()=>{if((view==="ops"||view==="roster"))render()}).catch(()=>{})}
   let aogN=0,melN=0;for(const id of ids){const k=statusOf(id).key;if(k==="bad")aogN++;else if(k==="warn")melN++}
   const vAir=vfrLegs(al,now-12*H,now+H).filter(l=>l.t0<=now&&l.t1>now).length,netAir=O.net.filter(p=>!p.ground).length;
@@ -187,10 +346,10 @@
   /* manutenção */
   const mx=[...ids].map(id=>({id,s:statusOf(id)})).filter(x=>x.s.key!=="ok").sort((a,b)=>(a.s.key==="bad"?0:1)-(b.s.key==="bad"?0:1)).slice(0,5);
   const evs=(typeof EVENTS!=="undefined"?EVENTS:[]).filter(e=>e.start>now-3*H).sort((a,b)=>a.start-b.start).slice(0,3);
-  return`<div class="op">
-   <div class="op-hero" style="background:linear-gradient(120deg,${P.a},${P.b});color:${P.ink}"><span class="op-lg">${(AIRLINE_IATA[al]==='AF'?`<svg width="62" viewBox="0 0 108 34" aria-label="Air France" role="img"><g fill="#142c51"><path fill-rule="evenodd" d="M2 31 22 3h12l6 28H29l-1-6H16l-4 6Zm19-13h6l-2-9Z"/><path d="M44 3h32l-4 7H54l-1 5h16l-4 7H51l-2 9H38Z"/></g><path fill="#ed273e" d="M89 3h17L87 27q-3 4-8 4H65q5-1 8-5Z"/></svg>`:typeof alSym==="function"&&alSym(al)||esc(al.slice(0,2)))}</span>
+  return`<div class="op${freelancer?" op-freelancer":""}">
+   ${freelancer?"":`<div class="op-hero" style="background:linear-gradient(120deg,${P.a},${P.b});color:${P.ink}"><span class="op-lg">${(AIRLINE_IATA[al]==='AF'?`<svg width="62" viewBox="0 0 108 34" aria-label="Air France" role="img"><g fill="#142c51"><path fill-rule="evenodd" d="M2 31 22 3h12l6 28H29l-1-6H16l-4 6Zm19-13h6l-2-9Z"/><path d="M44 3h32l-4 7H54l-1 5h16l-4 7H51l-2 9H38Z"/></g><path fill="#ed273e" d="M89 3h17L87 27q-3 4-8 4H65q5-1 8-5Z"/></svg>`:typeof alSym==="function"&&alSym(al)||esc(al.slice(0,2)))}</span>
     <div><span class="op-kk">${esc(ot("k"))}</span><h2>${esc(al||"—")}</h2><small>${esc(ot("sub",{n,t:utc(now)}))}</small></div>
-    </div>
+    </div>`}
    <nav class="op-tabs op-top-tabs" aria-label="${esc(ot("nav"))}">${sectionButtons()}</nav>
    <div class="op-g"><section class="op-c op-map-panel"><div class="op-hd"><h3>${esc(ot("where"))}</h3>
      <span>● ${esc(ot("live"))}</span>
@@ -199,7 +358,7 @@
     </div><p class="hint op-note">${esc(ot("netNote"))}</p></section>
     <section class="op-c op-map-panel op-rmap-panel" hidden><div class="op-hd"><h3>${esc(ot("rplMap"))}</h3><span class="muted" id="op-rmap-n"></span></div>
     <div class="op-mw"><div class="op-mapbox"><div id="op-rmap" class="op-map"></div></div></div></section>
-    <div class="op-side"><section class="op-c op-roster" data-op-pane="scale">${view==="roster"?rosterView():""}</section><section class="op-c" data-op-pane="air"><div class="op-hd"><h3>${esc(ot("airList"))}</h3></div><div id="op-air"></div></section>
+    <div class="op-side"><section class="op-c op-roster" data-op-pane="scale">${view==="roster"?rosterView():""}</section><section class="op-c" data-op-pane="air"><div class="op-hd"><h3>${esc(ot("airList"))}</h3>${liveAirlineOptions()}</div><div id="op-air"></div></section>
      <section class="op-c" data-op-pane="rpl"><div class="op-hd"><h3>${esc(ot("rpl"))}</h3><button type="button" class="linkish" data-view="roster">${esc(ot("build"))} ›</button></div><div id="op-rpl"></div></section>
    <section class="op-c" data-op-pane="rank"><div class="op-hd"><h3>${esc(ot("rank"))}</h3><button type="button" class="linkish" data-view="logbook">${esc(t("nav_logbook"))} ›</button></div>
      ${rl.length?rl.map((r,i)=>`<div class="op-r op-rk"><span>${i<3?["🥇","🥈","🥉"][i]:i+1}</span><span><b>${esc(names[r.p]||pilot(r.p)||"—")}</b> <small class="muted">${esc(ot("flightsN",{n:r.n}))}</small></span><b class="mono">${block(r.min)}</b></div>`).join("")+(bl?`<p class="muted op-best">${esc(ot("best",{p:names[bl.p]||pilot(bl.p)||"—",v:Math.round(bl.best)}))}</p>`:""):`<p class="muted">${esc(ot("rankNone"))}</p>`}</section>
@@ -211,21 +370,9 @@
  const compactScreen=matchMedia("(max-width:800px)");
  let deskTab="air",phoneTab="air",pageIndex=0;
  const rosterView=viewRoster;
- window.opsRosterAirline=()=>view==="roster"?alNow():"";
- const allRosterFlights=rsSoonFlights;
- rsSoonFlights=function(dep){const flights=allRosterFlights(dep),al=window.opsRosterAirline();return al?flights.filter(f=>f.al===al):flights};
- const rosterDefaults=rsDefaults;
- rsDefaults=function(){
-  if(view==="roster"&&!RS.roster){
-   const available=rsSoonFlights(RS.dep).length>0;
-   if(RS.opsNoRpl&&available){RS.other=false;RS.opsNoRpl=false}
-   if(!RS.other&&!available)RS.opsNoRpl=true;
-  }
-  return rosterDefaults.apply(this,arguments);
- };
  viewRoster=function(){return viewOps()};
- const tabNames={air:()=>ot("air"),rpl:()=>rplHelpText("label"),scale:()=>t("nav_roster"),rank:()=>ot("rank"),mx:()=>ot("mx"),rv:()=>t("nav_reviews"),ev:()=>ot("ev")};
- function sectionButtons(){return Object.entries(tabNames).map(([id,label])=>{
+ const tabNames={air:()=>ot("air"),rpl:()=>rplHelpText("label"),scale:()=>isFreelancer()?ft("fl_nav"):t("nav_roster"),mx:()=>ot("mx"),rv:()=>t("nav_reviews")};
+ function sectionButtons(){return Object.entries(tabNames).filter(([id])=>id!=="rpl"||!isFreelancer()).map(([id,label])=>{
    const button=`<button type="button" class="btn small" data-op-tab="${id}">${esc(label())}</button>`;
    return id==="rpl"?`<div class="op-scheduled-tab">${button}<button class="btn small" type="button" data-rpl-help aria-label="${esc(rplHelpText('title'))}" aria-haspopup="dialog">ⓘ</button></div>`:button;
  }).join("")}
@@ -237,7 +384,7 @@
  }
  function paintPanes(){
    const root=document.querySelector(".op");if(!root)return;
-   const selected=view==="roster"?"scale":deskTab;
+   const selected=view==="roster"?"scale":isFreelancer()&&deskTab==="rpl"?"air":deskTab;
    root.classList.toggle("op-generating",selected==="scale");
    const mapPanel=root.querySelector(".op-map-panel");
    /* o mapa só aparece em "No ar agora"; nas outras abas o conteúdo ocupa a largura toda */
@@ -253,7 +400,7 @@
    const footer=root.querySelector(".op-pages");footer.replaceChildren();footer.hidden=true;
    for(const pane of root.querySelectorAll("[data-op-pane]")){
      pane.hidden=pane.dataset.opPane!==selected;if(pane.hidden)continue;
-     if(selected==="scale")continue;
+     if(selected==="scale"||selected==="air"||selected==="rpl")continue;
      const rows=[...pane.querySelectorAll(".op-r")];
      rows.forEach(row=>row.hidden=false);
      if(!rows.length)continue;
@@ -280,29 +427,111 @@
    }
    fitOps();if(!mapPanel.hidden)O.map?.invalidateSize({pan:false});
  }
- /* mapa fixo das próximas partidas RPL: só as rotas, com setas animadas da origem para o destino */
- const RM={map:null,el:null};
- async function rplMap(){const el=document.getElementById("op-rmap");if(!el)return;
-  if(RM.map&&RM.el===el){RM.map.invalidateSize({pan:false});return}
-  if(RM.map){try{RM.map.remove()}catch(e){}RM.map=null}
+ /* A list row and a route share the key of the individual scheduled departure. */
+ const RM={map:null,el:null,signature:null,selected:null,routes:new Map(),bounds:null};
+ function syncRplSelection(reveal=false){
+  const box=document.getElementById("op-rpl");
+  for(const row of box?.querySelectorAll("[data-op-rpl-row]")||[]){
+   const selected=row.dataset.opRplRow===RM.selected;
+   row.classList.toggle("is-selected",selected);
+   row.querySelector("[data-op-rpl-select]").setAttribute("aria-pressed",String(selected));
+   if(selected&&reveal){
+    const pane=box.closest("[data-op-pane]"),bounds=pane.getBoundingClientRect(),rect=row.getBoundingClientRect();
+    if(rect.top<bounds.top)pane.scrollTop+=rect.top-bounds.top-6;
+    else if(rect.bottom>bounds.bottom)pane.scrollTop+=rect.bottom-bounds.bottom+6;
+   }
+  }
+ }
+ function highlightRplRoute(fit=false,show=false){
+  const m=RM.map;if(!m||!RM.el.isConnected||RM.el.offsetParent===null)return;
+  const selected=RM.routes.get(RM.selected);
+  for(const route of RM.routes.values()){
+   const active=route===selected,dim=selected&&!active;
+   route.base.setStyle({weight:active?7:3,opacity:active?.85:dim?.22:.35,color:active?"#fff":"#0b6a93"});
+   route.path.setStyle({weight:active?4:2.4,opacity:dim?.35:1,color:active?"#086685":"#f5b800",dashArray:active?"":"7 9"});
+   route.path.getElement()?.classList.toggle("is-selected",active);
+   route.marker.setOpacity(dim?.5:1);
+   route.marker.setZIndexOffset(active?1000:0);
+   route.marker.getElement()?.classList.toggle("is-selected",active);
+   route.marker.getElement()?.setAttribute("aria-pressed",String(active));
+  }
+  if(fit){
+   if(selected)m.fitBounds(selected.path.getBounds(),{padding:[36,40],maxZoom:7,animate:false});
+   else if(RM.bounds)m.fitBounds(RM.bounds,{padding:[34,34],maxZoom:7,animate:false});
+  }
+  if(selected){
+   selected.base.bringToFront();selected.path.bringToFront();
+   if(show)selected.marker.openPopup();
+  }
+ }
+ function selectRplFlight(key,fromList=false){
+  RM.selected=key;
+  syncRplSelection(!fromList);
+  highlightRplRoute(true,true);
+ }
+ document.addEventListener("click",event=>{
+  if(view!=="ops"||deskTab!=="rpl")return;
+  const button=event.target.closest("[data-op-rpl-select]");
+  if(button){selectRplFlight(button.dataset.opRplSelect,true);return}
+  const row=event.target.closest("[data-op-rpl-row]");
+  if(row&&!event.target.closest("button,a"))selectRplFlight(row.dataset.opRplRow,true);
+ });
+ async function rplMap(){
+  const el=document.getElementById("op-rmap");
+  if(!el||el.offsetParent===null)return;
   try{await Promise.all([loadLeaflet(),loadAirports(),typeof loadSchedule==="function"?loadSchedule():null])}catch(e){return}
-  if(!el.isConnected||el.offsetParent===null)return;const Lf=window.L;el.innerHTML="";
-  const m=Lf.map(el,{zoomControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false,tap:false,attributionControl:true,zoomSnap:.25});RM.map=m;RM.el=el;
-  const base=typeof brfBaseLayers==="function"?brfBaseLayers(Lf):null;let bk=null;try{bk=localStorage.getItem("vfr-map-base")}catch(e){}if(base)(base[bk]||Object.values(base)[0]).addTo(m);
-  const deps=rplLegs(alNow(),...rsRplWindow()).slice(0,5),seen=new Map(); /* as mesmas partidas da lista ao lado */
-  for(const d of deps){const k=d.dep+">"+d.arr;if(!seen.has(k))seen.set(k,{dep:d.dep,arr:d.arr,f:[]});const r=seen.get(k);if(r.f.length<4)r.f.push(`${d.reg} · ${utc(d.t0)}`)}
-  const routes=[...seen.values()].filter(r=>ll(r.dep)&&ll(r.arr)).slice(0,40),nb=document.getElementById("op-rmap-n");if(nb)nb.textContent=routes.length?ot("rplRoutes",{n:routes.length}):"";
-  if(!routes.length){m.setView([-15,-50],3);const box=document.createElement("div");box.className="op-rmap-empty";box.textContent=ot("rplNoMap");el.appendChild(box);return}
-  const pts=[];routes.forEach(r=>{pts.push(ll(r.dep),ll(r.arr))});m.fitBounds(pts,{padding:[34,34],maxZoom:7});
-  const lay=Lf.layerGroup().addTo(m),aps=new Map();
-  for(const r of routes){const a=ll(r.dep),b=ll(r.arr),dx=b[1]-a[1],dy=b[0]-a[0],len=Math.hypot(dx,dy)||1,k=Math.min(.22,1.2/len+.08);
-   const c=[(a[0]+b[0])/2+dx*k,(a[1]+b[1])/2-dy*k],arc=[];for(let i=0;i<=24;i++){const t=i/24,u=1-t;arc.push([u*u*a[0]+2*u*t*c[0]+t*t*b[0],u*u*a[1]+2*u*t*c[1]+t*t*b[1]])}
-   Lf.polyline(arc,{className:"op-rt-base",weight:3,opacity:.35,interactive:false}).addTo(lay);
-   Lf.polyline(arc,{className:"op-rt",weight:2.4,opacity:1}).bindTooltip(`<b>${esc(r.dep)} → ${esc(r.arr)}</b><br>${r.f.map(esc).join("<br>")}`,{sticky:true}).addTo(lay);
-   const p1=m.latLngToLayerPoint(arc[21]),p2=m.latLngToLayerPoint(arc[24]),ang=Math.atan2(p2.y-p1.y,p2.x-p1.x)*180/Math.PI;
-   Lf.marker(arc[24],{interactive:false,icon:Lf.divIcon({className:"op-rt-arrow",html:`<i style="transform:rotate(${ang.toFixed(0)}deg)"></i>`,iconSize:[16,16],iconAnchor:[8,8]})}).addTo(lay);
-   aps.set(r.dep,(aps.get(r.dep)||0)|1);aps.set(r.arr,(aps.get(r.arr)||0)|2)}
-  for(const [c,kind] of aps){Lf.circleMarker(ll(c),{radius:kind&1?5:3.5,weight:1.5,color:"#fff",fillColor:kind&1?"#F5B800":"#0B6A93",fillOpacity:1,interactive:false}).bindTooltip(esc(c),{permanent:true,direction:"right",className:"op-tt op-rt-lbl",offset:[6,0]}).addTo(lay)}}
+  if(!el.isConnected||el.offsetParent===null)return;
+  const Lf=window.L,deps=rplDepartures(),signature=JSON.stringify(deps.map(d=>d.key));
+  if(!deps.some(d=>d.key===RM.selected))RM.selected=null;
+  paintRplList(deps);
+  if(RM.map&&RM.el===el&&RM.signature===signature){
+   const resized=RM.size!==el.clientWidth+"x"+el.clientHeight;
+   RM.size=el.clientWidth+"x"+el.clientHeight;
+   RM.map.invalidateSize({pan:false});
+   if(resized)highlightRplRoute(true);
+   return;
+  }
+  if(RM.map){try{RM.map.remove()}catch(e){}}
+  el.innerHTML="";
+  const m=Lf.map(el,{zoomControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false,tap:false,attributionControl:true,zoomSnap:.25});
+  Object.assign(RM,{map:m,el,signature,size:el.clientWidth+"x"+el.clientHeight,bounds:null});m.setView([-15,-50],3);
+  RM.routes.clear();
+  const base=typeof brfBaseLayers==="function"?brfBaseLayers(Lf):null;
+  let bk=null;try{bk=localStorage.getItem("vfr-map-base")}catch(e){}
+  if(base)(base[bk]||Object.values(base)[0]).addTo(m);
+  const flights=deps.filter(d=>ll(d.dep)&&ll(d.arr)),nb=document.getElementById("op-rmap-n");
+  if(nb)nb.textContent=flights.length?ot("rplRoutes",{n:new Set(flights.map(d=>d.dep+">"+d.arr)).size}):"";
+  if(!flights.length){m.setView([-15,-50],3);const box=document.createElement("div");box.className="op-rmap-empty";box.textContent=ot("rplNoMap");el.appendChild(box);return}
+  const lay=Lf.layerGroup().addTo(m),aps=new Map(),overlaps=new Map(),points=[];
+  for(const d of flights){
+   const a=ll(d.dep),b=ll(d.arr),dx=b[1]-a[1],dy=b[0]-a[0],len=Math.hypot(dx,dy)||1,routeKey=d.dep+">"+d.arr;
+   const overlap=overlaps.get(routeKey)||0;
+   overlaps.set(routeKey,overlap+1);
+   const k=Math.min(.22,1.2/len+.08)+.12*overlap;
+   const c=[(a[0]+b[0])/2+dx*k,(a[1]+b[1])/2-dy*k],arc=[];
+   for(let i=0;i<=24;i++){const t=i/24,u=1-t;arc.push([u*u*a[0]+2*u*t*c[0]+t*t*b[0],u*u*a[1]+2*u*t*c[1]+t*t*b[1]])}
+   points.push(...arc);
+   const base=Lf.polyline(arc,{className:"op-rt-base",interactive:false}).addTo(lay);
+   const path=Lf.polyline(arc,{className:"op-rt",interactive:false}).addTo(lay);
+   Lf.polyline(arc,{className:"op-rt-hit",weight:18,opacity:0,bubblingMouseEvents:false}).addTo(lay).on("click",()=>selectRplFlight(d.key));
+   const a1=m.project(arc[15],7),a2=m.project(arc[17],7),angle=Math.atan2(a2.y-a1.y,a2.x-a1.x)*180/Math.PI;
+   const label=d.code+" "+d.reg;
+   const marker=Lf.marker(arc[16],{title:label,alt:label,icon:Lf.divIcon({className:"op-rt-arrow",html:`<i style="transform:rotate(${angle.toFixed(0)}deg)"></i>`,iconSize:[24,24],iconAnchor:[12,12]})}).addTo(lay);
+   marker.bindPopup(`<div class="op-rpl-popup"><strong>${esc(label)}</strong><span class="mono">${esc(d.dep)} → ${esc(d.arr)}</span><small>${utc(d.t0)} · ${esc(ot("planned"))}</small></div>`,{autoPan:false,offset:[0,-8]});
+   marker.on("click",()=>selectRplFlight(d.key));
+   const control=marker.getElement();
+   control?.setAttribute("aria-label",label+" · "+d.dep+" → "+d.arr+" · "+utc(d.t0));
+   control?.addEventListener("keydown",event=>{
+    if(event.key!=="Enter"&&event.key!==" ")return;
+    event.preventDefault();event.stopPropagation();selectRplFlight(d.key);
+   });
+   RM.routes.set(d.key,{base,path,marker});
+   aps.set(d.dep,(aps.get(d.dep)||0)|1);aps.set(d.arr,(aps.get(d.arr)||0)|2);
+  }
+  for(const [c,kind] of aps){Lf.circleMarker(ll(c),{radius:kind&1?5:3.5,weight:1.5,color:"#fff",fillColor:kind&1?"#F5B800":"#0B6A93",fillOpacity:1,interactive:false}).bindTooltip(esc(c),{permanent:true,direction:"right",className:"op-tt op-rt-lbl",offset:[6,0]}).addTo(lay)}
+  RM.bounds=Lf.latLngBounds(points);
+  highlightRplRoute(true,!!RM.selected);
+ }
  document.addEventListener("click",e=>{
    const button=e.target.closest("[data-op-tab],[data-op-page]");if(!button)return;
    if(button.dataset.opTab==="scale"&&view!=="roster"){if(rosterMenuLocked())return showRosterLocked();view="roster";render();return}
@@ -322,11 +551,11 @@
     const h=tb.querySelector('[data-view="home"]');if(h)h.insertAdjacentHTML("afterend",html);else tb.insertAdjacentHTML("afterbegin",html)}
    if((view==="ops"||view==="roster")){
      tb&&tb.querySelectorAll('.tab[data-view]').forEach(b=>b.setAttribute("aria-current",b.dataset.view==="ops"?"page":"false"));const pt=document.getElementById("page-title");if(pt)pt.textContent=ot("nav")}}catch(e){}return r}}
- if(typeof render==="function"){const rr=render;render=function(){const r=rr.apply(this,arguments);try{if((view==="ops"||view==="roster")&&session){paintPanes();if(view==="roster"){if(O.map){O.center=O.map.getCenter();O.zoom=O.map.getZoom();O.map.remove();O.map=null}opsRosterPaint()}else initMap()}else if(O.map){try{O.center=O.map.getCenter();O.zoom=O.map.getZoom();O.map.remove()}catch(e){}O.map=null;O.lay=null;O.play=false}}catch(e){console.warn(e)}return r}}
- setInterval(()=>{if((view==="ops"||view==="roster")&&!document.hidden){netFetch();if(O.mode==="now")draw()}},30e3);
+ if(typeof render==="function"){const rr=render;render=function(){const r=rr.apply(this,arguments);try{if((view==="ops"||view==="roster")&&session){paintPanes();if(view==="roster"){if(O.map){O.center=O.map.getCenter();O.zoom=O.map.getZoom();O.map.remove();O.map=null}opsRosterPaint()}else initMap()}else if(O.map){try{O.center=O.map.getCenter();O.zoom=O.map.getZoom();O.map.remove()}catch(e){}O.map=null;O.lay=null;O.markers.clear();O.play=false}}catch(e){console.warn(e)}return r}}
+ setInterval(()=>{if((view==="ops"||view==="roster")&&!document.hidden){netFetch();if(O.mode==="now"&&O.map){draw();mapTraffic(false,O.map)}if(view==="ops"&&deskTab==="rpl")rplMap()}},30e3);
  const css=`.op{display:grid;gap:14px}
 .op-map-panel[hidden]{display:none!important}
-.op-rt{stroke:#F5B800;stroke-dasharray:7 9;animation:opRt 1.1s linear infinite;cursor:default}.op-rt-base{stroke:#0B6A93}
+.op-rt{animation:opRt 1.1s linear infinite}.op-rt.is-selected{animation:none}
 @keyframes opRt{to{stroke-dashoffset:-16}}
 @media (prefers-reduced-motion:reduce){.op-rt{animation:none}}
 .op-rt-arrow{background:none;border:0}.op-rt-arrow i{display:block;width:0;height:0;margin:1px 0 0 2px;border-left:13px solid #F5B800;border-top:7px solid transparent;border-bottom:7px solid transparent;filter:drop-shadow(0 0 1px #13202E);transform-origin:40% 50%}
@@ -345,7 +574,7 @@
 .op-g{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:14px;align-items:start}.op-side{display:grid;gap:14px}
 .op-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .op-c{background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
-.op-hd{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}.op-hd h3{margin:0;font:700 1.2rem var(--f-display);flex:1;min-width:120px}.op-hd .linkish{font-size:.8rem;white-space:nowrap}
+.op-hd{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}.op-hd h3{margin:0;font:700 1.2rem var(--f-display);flex:1;min-width:120px}.op-hd .linkish{font-size:.8rem;white-space:nowrap}.op-airline-filter{display:flex;align-items:center;gap:8px;max-width:100%;min-width:0}#op-live-airline-icon{display:grid;place-items:center;flex:none}#op-live-airline-icon:empty{display:none}#op-live-airline-icon .al-sym{width:28px;height:28px;margin:0}#op-live-airline{width:auto;max-width:100%;min-width:0}
 .op-mw{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
 .op-mapbox{position:relative;isolation:isolate;z-index:0}.op-map{height:440px;border-radius:10px;overflow:hidden;background:#0f2233}
 .op-cnt{position:absolute;left:54px;right:132px;top:10px;z-index:500;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none}.op-cnt span{background:rgba(8,16,26,.82);color:#dbe6f0;border-radius:8px;padding:5px 9px;font-size:.74rem}.op-cnt b{font:600 .95rem var(--f-mono);color:#fff;margin-right:4px}
@@ -372,13 +601,21 @@ button.op-chip.warn{cursor:pointer}.op-rk>span:first-child{min-width:22px;text-a
 @media (max-width:1200px){.op-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.op-g{grid-template-columns:1fr}}
 @media (max-width:900px){.op-g3{grid-template-columns:1fr}.op-mw{grid-template-columns:1fr}.op-feedbox{height:auto;max-height:220px}.op-map{height:360px}}
 @media (max-width:640px){.op-hero{grid-template-columns:auto minmax(0,1fr)}.op-hero select{grid-column:1/-1;max-width:none}.op-hero h2{font-size:1.5rem}.op-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.op-tl{grid-template-columns:auto minmax(0,1fr)}.op-trk{grid-column:1/-1}.op-range{display:none}.op-cnt{left:50px;right:118px}.op-clock b{font-size:1.15rem}}
-#view:has(>.op){padding-block:8px}.op{grid-template-rows:auto auto minmax(0,1fr);gap:8px}.op [hidden]{display:none!important}.op-hero{padding:8px 12px}.op-kpis{gap:5px}.op-kpis>div{padding:5px 8px}.op-kpis b{font-size:1.2rem}.op-g{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);align-items:stretch;min-height:0;gap:8px}.op-map-panel{display:flex;flex-direction:column}.op-map-panel .op-mw{flex:1;min-height:0}.op-mapbox,.op-mapbox .op-map{height:100%;min-height:0}.op-side{display:flex;flex-direction:column;gap:6px;min-height:0;min-width:0}.op-side>.op-c{overflow:auto;min-height:0;flex:1}.op-tabs,.op-pages{display:flex;gap:5px;flex-wrap:wrap}.op-tabs .btn{padding:4px 8px}.op-tabs [aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent)}.op-pages{align-items:center;justify-content:center}.op-c{padding:9px 12px}.op-hd{margin-bottom:5px}
+#view:has(>.op){padding-block:8px}.op.op-freelancer{grid-template-rows:auto minmax(0,1fr)}.op{grid-template-rows:auto auto minmax(0,1fr);gap:8px}.op [hidden]{display:none!important}.op-hero{padding:8px 12px}.op-kpis{gap:5px}.op-kpis>div{padding:5px 8px}.op-kpis b{font-size:1.2rem}.op-g{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);align-items:stretch;min-height:0;gap:8px}.op-map-panel{display:flex;flex-direction:column}.op-map-panel .op-mw{flex:1;min-height:0}.op-mapbox,.op-mapbox .op-map{height:100%;min-height:0}.op-side{display:flex;flex-direction:column;gap:6px;min-height:0;min-width:0}.op-side>.op-c{overflow:auto;min-height:0;flex:1}.op-tabs,.op-pages{display:flex;gap:5px;flex-wrap:wrap}.op-tabs .btn{padding:4px 8px}.op-tabs [aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent)}.op-pages{align-items:center;justify-content:center}.op-c{padding:9px 12px}.op-hd{margin-bottom:5px}
 @media(max-width:800px){.op-g{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}.op-side{display:contents}.op-tabs{grid-row:1}.op-map-panel,.op-side>.op-c{grid-row:2}.op-pages{grid-row:3}.op-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.op-kpis span{display:none}.op-hero{grid-template-columns:auto minmax(0,1fr);gap:8px}.op-hero select{grid-column:auto;width:100%;max-width:120px}.op-hero h2{font-size:1.25rem}.op-hero small{font-size:.7rem}.op-lg{width:48px;height:48px}.op-lg img,.op-lg svg{width:40px;height:40px}}
 
-.op-top-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.op{--op-tab-count:5;--op-tab-gap:7px}
+.op-freelancer{--op-tab-count:4}
+.op-top-tabs{display:grid;grid-template-columns:repeat(var(--op-tab-count),minmax(0,1fr));gap:var(--op-tab-gap)}
+@media(width > 800px){
+ .op-g:has([data-op-pane="air"]:not([hidden])){
+  grid-template-columns:minmax(0,1fr) minmax(0,calc((100% - (var(--op-tab-count) - 1) * var(--op-tab-gap)) / var(--op-tab-count)));
+ }
+ #op-air .op-flight > :last-child{min-width:0;overflow-wrap:anywhere}
+}
 .op-top-tabs .btn{width:100%;padding:10px 6px;font-size:.85rem;min-height:42px;white-space:normal}
 .op-top-tabs [aria-pressed=true]{box-shadow:inset 0 -3px var(--accent)}
-@media(max-width:800px){.op-top-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}.op-top-tabs .btn{padding:6px;min-height:36px}.op-g{grid-template-rows:minmax(90px,.65fr) minmax(0,1fr)}.op-side{display:flex;grid-row:2}.op-map-panel{grid-row:1}.op-side>.op-c{grid-row:auto}.op-pages{grid-row:auto}.op-note{font-size:.65rem;margin:3px 0}.op-clock b{font-size:1rem}.op-cnt{display:none}}
+@media(max-width:800px){.op-freelancer .op-top-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.op-top-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}.op-top-tabs .btn{padding:6px;min-height:36px}.op-g{grid-template-rows:minmax(90px,.65fr) minmax(0,1fr)}.op-side{display:flex;grid-row:2}.op-map-panel{grid-row:1}.op-side>.op-c{grid-row:auto}.op-pages{grid-row:auto}.op-note{font-size:.65rem;margin:3px 0}.op-clock b{font-size:1rem}.op-cnt{display:none}}
 
 .op-scheduled-tab{display:flex;min-width:0}.op-scheduled-tab>[data-op-tab]{flex:1;min-width:0;width:auto!important;border-radius:6px 0 0 6px}.op-scheduled-tab>[data-rpl-help]{flex:none;width:30px!important;padding:4px!important;border-radius:0 6px 6px 0;border-left:0}
 `;

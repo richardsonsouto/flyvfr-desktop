@@ -2,21 +2,19 @@
 .op-generating .op-kpis{display:none}
 .op-generating .op-g{display:block;min-height:0}
 .op-generating .op-side{display:flex;height:100%;min-height:0}
-.op-generating .op-roster{flex:0 1 auto;min-width:0;max-height:100%;overflow:clip auto}
+.op-generating .op-roster{flex:1 1 100%;min-width:0;max-height:100%;overflow:clip auto}
 .op-roster:has(.alpick-pop:not([hidden])){overflow:visible}
 .op-roster{display:flex;flex-direction:column;gap:7px}
-.op-roster .ops-roster-unavailable{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.op-roster:has(.ops-roster-unavailable:not([hidden])) .sd-note{display:none}
 .op-roster .ops-roster-tabs,.ops-roster-pages{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;flex:none}
 .op-roster .ops-roster-tabs [aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent)}
 .op-roster .rs-form-screen{padding:6px!important;margin:0!important;border:0;box-shadow:none;min-height:0}
-.op-roster .rs-grid{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(220px,280px)!important;gap:16px!important}
+.op-roster .rs-grid{display:contents!important}
 .op-roster .rs-sidebar-main,.op-roster .rs-layout-left{min-width:0}
 .op-roster .rs-main-fields{display:block!important}
 .op-roster .rs-layout-right{display:none}
 .op-roster .rs-top-fields,.op-roster .rs-origin-compact{gap:8px!important}
 .op-roster .rs-layout-sidebar{padding:10px!important;display:flex!important;flex-direction:column;gap:10px!important}
-.op-roster .rs-layout-sidebar h3,.op-roster #rs-sidebar-summary{display:none}
+.op-roster .rs-layout-sidebar h3{display:none}
 .op-roster .rs-settings,.op-roster .rs-actions{grid-column:1/-1}
 .op-roster .rs-actions{display:flex!important;gap:8px;justify-content:space-between;align-items:center;margin:0!important}
 .op-roster .rs-actions>div>small{display:none}
@@ -27,11 +25,10 @@
 .op-roster .rs-out{padding:8px;margin:0;border:0}
 .op-roster .rs-day header{flex-wrap:wrap;padding:5px!important}
 .op-roster .rs-day footer{padding:5px!important}
-.op-roster .rs-sum{gap:5px;flex-wrap:wrap;font-size:12px}
+.op-roster .rs-out > .rs-sum{display:none}
 .op-roster .bpc{margin:0!important}
 .op-roster .notice{font-size:12px;padding:6px}
 .op-roster .rs-accept{display:flex;flex-wrap:wrap;gap:6px}
-.op-roster .ops-roster-extras{grid-column:1/-1;min-width:0}
 .op-roster[data-stage=config] .rs-out,
 .op-roster[data-stage=review] .rs-form-screen{display:none!important}
 /* ao gerar, a escala "vira" e ocupa a tela */
@@ -41,48 +38,420 @@
 /* botão "← Nova escala" no topo da apresentação */
 .op-roster .ops-roster-back{align-self:flex-start;margin:0 0 10px}
 .op-roster .rs-liv{display:block!important}
-/* The airport header is moved outside the form by scMoveDep. Keep one grid,
-   rather than nesting the generator inside the header's former main column. */
-.op-roster .rs-form-screen:has(>.rs-top-moved){display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,280px);gap:12px 16px;width:100%;max-width:none;box-sizing:border-box}
-.op-roster .rs-form-screen:has(>.rs-top-moved)>#f-rs{display:contents!important}
-.op-roster .rs-form-screen:has(>.rs-top-moved)>#f-rs>.rs-sidebar-main{grid-column:1;grid-row:3}
-.op-roster .rs-form-screen:has(>.rs-top-moved)>#f-rs>.rs-layout-sidebar{grid-column:2;grid-row:1/span 3;align-self:start}
-.op-roster .rs-top-moved{width:100%;min-width:0;grid-column:1;grid-row:1}
-.op-roster .rs-mode-field{grid-column:1;grid-row:2;margin:0!important}
-.op-roster .ops-roster-extras{grid-column:1/-1}
-.op-roster .rs-rpl-pair>.rs-ac,.op-roster .rs-rpl-pair .rs-pf-options,.op-roster .rs-rpl-pair .acp{min-width:0;width:100%}
-@media(max-width:1050px){.op-roster .rs-rpl-pair{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:800px){
- .op-roster .rs-form-screen:has(>.rs-top-moved){display:block}
- .op-roster .rs-form-screen:has(>.rs-top-moved)>#f-rs{display:grid!important}
- .op-roster .rs-form-screen:has(>.rs-top-moved)>#f-rs>.rs-sidebar-main,
- .op-roster .rs-form-screen:has(>.rs-top-moved)>#f-rs>.rs-layout-sidebar{grid-column:1;grid-row:auto}
+.op-roster[data-stage=config] .rs-form-screen{
+ display:flex;flex:1;flex-direction:column;gap:18px;width:100%;max-width:none;
+ box-sizing:border-box;padding:clamp(12px,3vw,28px)!important
 }
-@media(max-width:800px){.op-roster .rs-grid{grid-template-columns:minmax(0,1fr)!important}.op-generating .op-side{display:flex}.op-roster .rs-layout-sidebar{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.op-roster [data-ops-step]{width:100%;min-width:0;box-sizing:border-box}
+.op-roster [data-ops-step][hidden]{display:none!important}
+.op-roster .rs-mode-field{margin:0!important}
+.op-roster .rs-mode-card{min-height:48px!important}
+.op-roster .ops-step-header{display:grid;gap:6px;align-self:stretch}
+.op-roster .ops-step-header :is(p,h3){margin:0}
+.op-roster .ops-step-header progress{width:100%;height:6px;accent-color:var(--accent)}
+.op-roster .ops-step-nav{display:flex;align-self:stretch;justify-content:space-between;gap:10px;margin-top:auto}
+.op-roster .ops-step-nav [data-ops-step-next]{margin-inline-start:auto}
+.op-roster .ops-step-error{margin:0}
 
-.op-top-tabs:has([data-op-tab="scale"]){grid-template-columns:repeat(7,minmax(0,1fr))}
+.op-roster .rs-rpl-status:empty{display:none}
+.op-roster .rs-rpl-pair{grid-template-columns:minmax(0,1fr)}
+.op-roster .rs-rpl-pair>.rs-ac,.op-roster .rs-rpl-pair .acp{min-width:0;width:100%}
+.op-roster .rs-pf .pf-list{
+ display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,212px),1fr));
+ grid-auto-rows:68px;gap:8px;align-items:stretch;margin-top:4px
+}
+.op-roster .rs-form-screen .rs-pf .pf-i{width:100%;min-width:0}
+.op-roster .rs-form-screen .rs-pf .rs-pf-card-body{grid-template-columns:minmax(0,1fr) max-content}
+.op-roster .rs-pf .rs-pf-date{white-space:normal}
+.op-roster .rs-pf-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}
+.op-roster .rs-pf-head .lbl{margin:0}
+.op-roster .rs-pf-pages{display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+.op-roster .rs-pf-pages button{min-width:44px;min-height:44px}
+
+
 .op-top-tabs .btn{display:flex;align-items:center;justify-content:center;text-align:center}
-@media(max-width:800px){.op-top-tabs:has([data-op-tab="scale"]){grid-template-columns:repeat(3,minmax(0,1fr))}}
 
-/* passos guiados: título no topo (::before) + círculo numerado (::after, absoluto) — desktop e celular */
-.op-roster[data-stage=config] [data-eyebrow]{position:relative;padding-left:27px}
-/* .rs-layout-sidebar tem padding:10px!important (linha acima), que sem isso derrubava o
-   padding-left para 10px e fazia o círculo do passo 4 ("Quando voar") cair em cima do texto */
-.op-roster[data-stage=config] .rs-layout-sidebar[data-eyebrow]{padding-left:27px!important}
-.op-roster[data-stage=config] [data-eyebrow]::before{
- content:attr(data-eyebrow);display:flex;align-items:center;min-height:20px;
- font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;font-weight:700;
- color:var(--accent);margin:0 0 8px}
-.op-roster[data-stage=config] [data-eyebrow]::after{
- content:attr(data-step);position:absolute;left:0;top:0;
- width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
- font-size:.74rem;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
 
-/* mobile: botão "Gerar escala" fixo no rodapé, sempre ao alcance */
-@media(max-width:760px){
- .op-roster[data-stage=config] .rs-actions{position:sticky;bottom:0;z-index:30;background:var(--sheet);
-  border-top:1px solid var(--line);margin:4px -6px -6px!important;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px))!important;
-  box-shadow:0 -6px 18px rgba(0,0,0,.08)}
- .op-roster[data-stage=config] .rs-actions>div>b{font-size:.82rem}
- .op-roster[data-stage=config] .rs-actions button[type=submit]{min-height:44px;padding:10px 20px;font-weight:700}
+/* Directional step motion and airline-colored flight progress. */
+.op-roster .ops-step-header progress{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}
+.op-roster .ops-step-rail{height:6px;width:100%;background:var(--sunk);border-radius:8px;overflow:hidden}
+.op-roster .ops-step-rail>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 72%,var(--ink)))}
+.op-roster .rs-mode-card,.op-roster .pf-i{transition:border-color .18s,background-color .18s,box-shadow .18s}
+.op-roster .rs-mode-card:active,.op-roster .pf-i:active{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}
+@media(prefers-reduced-motion:reduce){.op-roster .rs-mode-card,.op-roster .pf-i{transition:none}}
+
+/* The departure map and airport data share the available height in step 1. */
+.op-roster .rs-top-moved[data-ops-step="1"] {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
+.op-roster .rs-top-moved[data-ops-step="1"] .rs-origin-compact {
+  flex: 1;
+  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+  grid-template-areas: "map field" "map airport" "map facts";
+  grid-template-rows: auto auto 1fr;
+  gap: 14px 22px !important;
+  align-items: start;
+}
+.op-roster .rs-top-moved .rs-dep-f { grid-area: field; }
+.op-roster .rs-top-moved #rs-origin-info { grid-area: airport; display: block; min-width: 0; }
+.op-roster .rs-top-moved .rs-di-airport { padding: 0; gap: 4px; }
+.op-roster .rs-top-moved .rs-di-airport > b { font-size: 1.4rem; }
+.op-roster .rs-top-moved .dv-location { color: var(--muted); }
+.op-roster .rs-top-moved .dv-sat {
+  grid-area: map;
+  align-self: stretch;
+  width: 100%;
+  height: auto;
+  min-height: clamp(280px, 40dvh, 510px);
+  box-shadow: 0 3px 10px #0002;
+}
+.op-roster .rs-top-moved .dv-strip {
+  grid-area: facts;
+  display: grid;
+  gap: 0;
+  margin: 0;
+  min-width: 0;
+}
+.op-roster .dv-strip > div {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 10px;
+  align-items: start;
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+}
+.op-roster .dv-strip dt { font-weight: 600; color: var(--muted); }
+.op-roster .dv-strip dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.op-roster .dv-strip dd small { display: block; color: var(--muted); margin-top: 3px; }
+.op-roster .dv-map-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 20px;
+  background: #172630;
+  color: #fff;
+  text-align: center;
+}
+.op-roster .dv-strip .dv-cat {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 4px 12px;
+  background-image: linear-gradient(170deg, #ffffff1c, transparent 64%);
+  box-shadow: inset 0 1px #ffffff40, 0 3px #0006, 0 5px 8px #0002;
+}
+@media (hover: hover) and ( pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .op-roster .dv-strip .dv-cat { transition: transform .16s ease, box-shadow .16s ease; }
+  .op-roster .dv-strip .dv-cat:hover {
+    transform: translateY(-2px);
+    box-shadow: inset 0 1px #ffffff50, 0 5px #0006, 0 8px 11px #0003;
+  }
+  .op-roster .dv-strip .dv-cat:hover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(115deg, transparent 40%, #ffffff30 50%, transparent 60%) no-repeat;
+    background-size: 220% 100%;
+    animation: raised-button-reflection .55s ease-out both;
+  }
+}
+@container (max-width: 650px) {
+  .op-roster .rs-top-moved[data-ops-step="1"] .rs-origin-compact {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "field" "map" "airport" "facts";
+    grid-template-rows: auto;
+  }
+  .op-roster .rs-top-moved .dv-sat { min-height: clamp(180px, 38dvh, 300px); }
+}
+
+/* The ADC follows the satellite map projection. The toolbar stays readable above both. */
+.dv-sat .dv-adc-layer {
+  position: absolute;
+  opacity: .76;
+  pointer-events: none;
+}
+.dv-sat:has(.dv-adc-layer) :is(.dv-ov,.dv-pin,.dv-map-error) { display: none; }
+.dv-adc-control {
+  position: absolute;
+  z-index: 1;
+  right: 10px;
+  bottom: 10px;
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  max-width: calc(100% - 20px);
+  cursor: default;
+}
+.dv-adc-control .btn {
+  background: var(--sheet);
+  color: var(--ink);
+  border-color: var(--line);
+  box-shadow: 0 2px 5px #0005;
+}
+.dv-adc-control .btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+.dv-adc-status {
+  max-width: 270px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: var(--sheet);
+  color: var(--ink);
+  font-size: .75rem;
+}
+.dv-adc-status:empty { display: none; }
+
+.dv-adc-zoom {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.dv-adc-zoom .btn { min-width: 34px; min-height: 34px; }
+@media (pointer: coarse) {
+  .dv-adc-zoom .btn { min-width: 44px; min-height: 44px; }
+}
+
+.dv-sat:has(> .dv-tiles) {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.dv-sat.dv-adc-dragging { cursor: grabbing; }
+.dv-adc-dragging > :is(.dv-tiles, .dv-adc-layer, .dv-ov, .dv-pin) {
+  translate: var(--dv-drag-x) var(--dv-drag-y);
+}
+
+#op-air .op-flight {
+  width: 100%;
+  padding: 9px 7px;
+  border: 1px solid transparent;
+  border-bottom-color: var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+#op-air .op-flight:last-child { border-bottom-color: transparent; }
+#op-air .op-flight:hover { background: var(--sunk); }
+#op-air .op-flight[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: linear-gradient(155deg, var(--sheet), var(--accent-soft));
+  box-shadow: inset 0 1px #ffffff48, inset 0 -4px var(--accent), 0 3px 6px #0002;
+}
+#op-air .op-flight:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.op-src.adsb { background: #14775d; color: #fff; }
+.op-pl.op-flight-selected svg {
+  filter: drop-shadow(0 1px 2px #000) drop-shadow(0 0 3px #fff);
+  scale: 1.25;
+}
+.op-pl span { pointer-events: none; }
+.op-pl.op-flight-selected span {
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: #102239;
+}
+.op .op-clock { right: 58px; }
+.op .op-cnt { right: 162px; }
+#op-map .leaflet-control-layers-expanded { max-width: min(270px, calc(100vw - 70px)); }
+
+.op-roster .dv-strip > div { padding-block: 6px; }
+.op-roster .dv-strip .dv-metar { display: block; }
+.op-roster .dv-metar > dt { line-height: 32px; }
+.op-roster .dv-metar-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: -32px 0 4px 4.2rem;
+  justify-content: flex-end;
+}
+.op-roster .dv-metar-modes .btn {
+  min-height: 32px;
+  padding: 3px 7px;
+  font-size: .75rem;
+}
+.op-roster .dv-metar-modes [aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.op-roster .dv-metar-report {
+  box-sizing: border-box;
+  block-size: 4.3rem;
+  overflow: auto;
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: var(--sunk);
+  font-size: .79rem;
+  overflow-wrap: anywhere;
+}
+.op-roster .dv-metar-report [hidden] { display: none !important; }
+.op-roster .dv-metar-report .wx-lab { display: none; }
+.op-roster .dv-metar-report .wxd {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 3px 8px;
+  padding: 0;
+  font-size: inherit;
+}
+
+.op-roster .rs-form-screen .rs-mode-field[data-ops-step="2"] {
+  flex: 1 0 auto;
+  container-type: inline-size;
+  flex-flow: column nowrap;
+  align-items: stretch;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.op-roster .rs-form-screen .rs-mode-field[data-ops-step="2"] .rs-modes {
+  display: grid;
+  flex: 1 0 auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(min-content, 1fr);
+  gap: 14px;
+}
+.op-roster .rs-mode-field[data-ops-step="2"] .rs-mode-card {
+  min-width: 0;
+  padding: 14px !important;
+  font-size: clamp(1.1rem, 2.4vw, 1.8rem);
+}
+.op-roster .rs-form-screen .rs-mode-field[data-ops-step="2"] .rs-mode-card {
+  flex-direction: column;
+  gap: 8px;
+}
+.op-roster .rs-mode-field[data-ops-step="2"] .rs-mode-card strong { font-size: inherit; text-transform: uppercase; }
+.op-roster .rs-mode-field[data-ops-step="2"] .rs-mode-caption {
+  font-size: .85rem;
+  font-weight: 500;
+  max-width: 30ch;
+  white-space: normal;
+}
+@container (max-width: 450px) {
+  .op-roster .rs-form-screen .rs-mode-field[data-ops-step="2"] .rs-modes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.op-roster .rs-mode-field[data-ops-step="2"] .rs-modes > * { min-block-size: 108px; }
+.rs-rpl-option:has(.rs-rpl-card) { min-width: 0; perspective: 1000px; }
+.rs-rpl-card {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  transform-style: preserve-3d;
+  transition: transform .46s cubic-bezier(.25,.75,.25,1);
+}
+.rs-rpl-option.is-flipped .rs-rpl-card { transform: rotateY(180deg); }
+.rs-rpl-front,
+.rs-rpl-back {
+  position: relative;
+  grid-area: 1 / 1;
+  min-width: 0;
+  backface-visibility: hidden;
+}
+.rs-rpl-front { display: flex; }
+.rs-rpl-option .rs-rpl-front .rs-mode-card {
+  flex: 1;
+  --raised-button-radius: 12px;
+}
+.rs-rpl-option .rs-rpl-front .rs-rpl-info,
+.rs-rpl-back-close {
+  position: absolute;
+  inset: 8px 8px auto auto;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+}
+.rs-rpl-info > span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  border: 1.6px solid currentColor;
+  border-radius: 50%;
+  font: 700 16px/1 system-ui, sans-serif;
+}
+.rs-rpl-back {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--sheet);
+  color: var(--ink);
+  box-shadow: 0 4px 0 var(--line);
+  font-size: .9rem;
+  line-height: 1.45;
+}
+.rs-rpl-option:not(.is-flipped) .rs-rpl-back { contain: size; }
+.rs-rpl-back h4 { margin: 0; padding-inline-end: 32px; font-size: 1.05rem; }
+.rs-rpl-back p { margin: 0; }
+.rs-rpl-back-close { border: 0; color: inherit; cursor: pointer; font-size: 1.5rem; }
+@media (prefers-reduced-motion: reduce) {
+  .rs-rpl-card { transition: none; }
+}
+
+
+#op-rpl .op-r[data-op-rpl-row] {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 8px;
+  align-items: start;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-bottom-color: var(--line);
+  border-radius: 10px;
+}
+#op-rpl .op-r[data-op-rpl-row]:last-child { border-bottom-color: transparent; }
+#op-rpl .op-r[data-op-rpl-row]:hover { background: var(--sunk); }
+#op-rpl .op-r[data-op-rpl-row].is-selected {
+  border-color: var(--accent);
+  background: linear-gradient(155deg, var(--sheet), var(--accent-soft));
+  box-shadow: inset 0 1px #ffffff48, inset 0 -4px var(--accent), 0 3px 6px #0002;
+}
+.op-rpl-select {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.op-rpl-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#op-rpl .op-dep-route { white-space: normal; }
+#op-rpl .op-dep-state .btn { font-size: .76rem; }
+@container (max-width: 290px) {
+  #op-rpl .op-r[data-op-rpl-row] { grid-template-columns: minmax(0, 1fr); }
+  #op-rpl .op-dep-state { grid-column: 1; }
+}
+.op-rt-hit, .op-rt-arrow { cursor: pointer; }
+.op-rt-arrow i { margin: 8px auto 0; }
+.op-rt-arrow.is-selected i { border-left-color: #086685; filter: drop-shadow(0 0 2px white); }
+.op-rpl-popup { display: grid; gap: 3px; min-width: 110px; }
+.op-rpl-popup small { color: var(--muted); }

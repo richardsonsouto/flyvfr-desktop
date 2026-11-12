@@ -155,11 +155,24 @@ function rsFno(ac){const code=(AIRLINE_IATA[ac.airline]||AIRLINE_ICAO[ac.airline
    schedule.json: grade semanal montada do VRA da ANAC (voos regulares de passageiros de/para o Brasil),
    horários em hora de Brasília. Cada voo: [número, origem, destino, minuto da partida, tempo de bloco, dias da semana]
    (dias: bit 0 = segunda … bit 6 = domingo). A escala só usa voos dessa grade — nada é inventado. */
-let SCHED=null,schedP=null;
+let SCHED=null,schedP=null,schedFailed=false;
 function loadSchedule(){if(SCHED)return Promise.resolve(SCHED);if(schedP)return schedP;
-  schedP=fetch("schedule.json?v=2").then(r=>r.ok?r.json():null).then(j=>{SCHED=j||{al:{}};SCHED.idx={};
-    for(const al in SCHED.al){const m=SCHED.idx[al]={};for(const f of SCHED.al[al])(m[f[1]]=m[f[1]]||[]).push(f)}return SCHED})
-   .catch(()=>{SCHED={al:{},idx:{}};return SCHED});return schedP}
+  schedFailed=false;
+  schedP=fetch("schedule.json?v=2").then(r=>{
+    if(!r.ok)throw new Error("schedule "+r.status);
+    return r.json();
+  }).then(j=>{
+    if(!j?.al||typeof j.al!=="object"||Array.isArray(j.al))throw new Error("schedule format");
+    const idx={};
+    for(const [al,flights] of Object.entries(j.al)){
+      if(!Array.isArray(flights))throw new Error("schedule flights");
+      const origins=idx[al]={};
+      for(const f of flights)(origins[f[1]]=origins[f[1]]||[]).push(f);
+    }
+    SCHED={...j,idx};
+    return SCHED;
+  }).catch(()=>{schedFailed=true;return null}).finally(()=>{schedP=null});
+  return schedP}
 const schedIcao=ac=>{const c=AIRLINE_ICAO[ac.airline];return c&&SCHED&&SCHED.idx[c]?c:null};
 const hasRealSched=ac=>!!(ac&&schedIcao(ac));
 /* partidas reais de um aeroporto entre dois instantes (ms UTC) */
@@ -176,58 +189,67 @@ const RS_FAM={B736:"737",B737:"737",B738:"737",B739:"737",B38M:"737",B39M:"737",
   A332:"330",A333:"330",A338:"330",A339:"330",B788:"787",B789:"787",B78X:"787",B772:"777",B77W:"777",B77L:"777",B763:"767",B764:"767",
   A359:"350",A35K:"350",C208:"C208"};
 /* voo real compatível com a aeronave: com tipo informado (RPL), mesma família; sem tipo (VRA), pelo alcance */
-function rsRealOk(p,ac,f){if(f.typ){const a=RS_FAM[icaoType(ac.type)],b=RS_FAM[f.typ];if(!a||!b||a!==b)return false;
+function rsRealOk(p,ac,f){if(f.typ){const a=icaoType(ac.type),b=f.typ;if(a!==b&&(!RS_FAM[a]||RS_FAM[a]!==RS_FAM[b]))return false;
     return!!(AIRPORTS[f.dep]&&AIRPORTS[f.arr])&&rsNm(f.dep,f.arr)<=p.range}
   return rsRealFits(p,f.dep,f.arr)}
 function rsRealFits(p,dep,arr){if(!AIRPORTS[dep]||!AIRPORTS[arr])return false;const nm=rsNm(dep,arr);if(nm>p.range)return false;
   return p.cls==="wb"?nm>=1500:nm<=p.max}
 /* procura uma sequência de voos reais (busca em profundidade com limite) */
+function rsSamePlan(legs,previous){
+  return !!previous&&legs.length===previous.length&&legs.every((leg,i)=>{
+    const old=previous[i];
+    return leg.dep===old.dep&&leg.arr===old.arr&&leg.std===old.std&&(!leg.real||leg.flightNo===old.flightNo);
+  });
+}
 function realRoster(ctx,startMs,cur,mustEnd){
   const {p,ac,days,finalTarget,nxStart}=ctx,al=schedIcao(ac),n=ctx.legsPerDay||1,code=(AIRLINE_IATA[ac.airline]||al).toUpperCase();
   const fdp=(p.cls==="wb"?RS_FDP_LONG:p.fdp)*6e4,turn=Math.max(RS_RESERVATION_GAP_MIN,RS_TURN_MIN[p.cls]||RS_RESERVATION_GAP_MIN)*6e4,rest=(p.cls==="wb"?RS_REST_LONG[0]:RS_REST[0])*6e4;
   let budget=25000;const legs=[];
   const cand=(from,to,c,avoid)=>{const xs=realDeps(al,c,from,to).filter(f=>rsRealOk(p,ac,f));
     /* evita voltar a um aeroporto já visitado no mesmo dia (exceto o destino final), sem descartar */
-    return xs.sort((a,b)=>(avoid.has(a.arr)-avoid.has(b.arr))||(a.std-b.std)).slice(0,6)};
+    xs.sort((a,b)=>(avoid.has(a.arr)-avoid.has(b.arr))||(a.std-b.std));
+    return ctx.previous?xs:xs.slice(0,6)};
   function go(c,t,day,k,report,visited){
     if(--budget<0)return false;
-    if(day>days)return(!mustEnd||c===mustEnd)&&(!nxStart||legs[legs.length-1].sta+25*6e4<=nxStart);
+    if(day>days)return(!mustEnd||c===mustEnd)&&(!nxStart||legs[legs.length-1].sta+25*6e4<=nxStart)&&(!ctx.previous||(!rsSamePlan(legs,ctx.previous)&&!rsValidate(ctx,legs)));
     let from,to;
     if(k===0){from=t;to=day===1?t+18*36e5:t+24*36e5}else{from=t+turn;to=t+4*36e5}
     let cs=cand(from,to,c,visited);
     /* A primeira perna do voo RPL escolhido é obrigatória; as seguintes usam a grade normal. */
     const si=legs.length,S=ctx.twin&&ctx.twin.seq&&si<ctx.twin.seq.length&&legs.every(L=>L.twin)?ctx.twin.seq[si]:null;
-    if(S){const m=realDeps(al,c,S.std-6e4,S.std+6e4).filter(f=>+f.fno===+S.fno&&f.std>=from&&f.std<=to&&(ctx.twin.src==="pf"?rsNm(f.dep,f.arr)<=p.range:rsRealOk(p,ac,f)));
-      cs=si===0?m:m.concat(cs.filter(f=>!(+f.fno===+S.fno&&f.std===S.std)))}
+    const matches=f=>S&&String(f.fno)===String(S.fno)&&f.std===S.std&&f.dep===S.dep&&f.arr===S.arr;
+    if(S){const m=realDeps(al,c,S.std,S.std).filter(f=>matches(f)&&f.std>=from&&f.std<=to&&rsRealOk(p,ac,f));
+      cs=si===0?m:m.concat(cs.filter(f=>!matches(f)))}
     for(const f of cs){
+      if(budget<=0)return false;
       const rep=k===0?f.std-60*6e4:report;
       if(f.sta+30*6e4-rep>fdp)continue;
       if(nxStart&&f.sta+25*6e4>nxStart)continue;
       const last=day===days&&k===n-1;if(last&&mustEnd&&f.arr!==mustEnd)continue;
-      legs.push({dep:f.dep,arr:f.arr,std:f.std,sta:f.sta,nm:Math.round(rsNm(f.dep,f.arr)),blk:f.blk,day,flightNo:`${code} ${f.fno}`,real:true,route:f.route,fl:f.fl,spd:f.spd,typ:f.typ,twin:!!(S&&+f.fno===+S.fno&&f.std===S.std)});
+      legs.push({dep:f.dep,arr:f.arr,std:f.std,sta:f.sta,nm:Math.round(rsNm(f.dep,f.arr)),blk:f.blk,day,flightNo:`${code} ${f.fno}`,real:true,route:f.route,fl:f.fl,spd:f.spd,typ:f.typ,twin:!!matches(f)});
       const nv=new Set(k===n-1?[]:visited);nv.add(f.dep);
       const ok=k===n-1?go(f.arr,f.sta+30*6e4+rest,day+1,0,0,new Set()):go(f.arr,f.sta,day,k+1,rep,nv);
       if(ok)return true;legs.pop()}
     return false}
   return go(cur,startMs,1,0,0,new Set())?legs:null}
-function generateRealRoster(ac,dep,startMs,days,legsPerDay,from,nx,twin){
-  const p=rsProfile(ac);let legs=[],t=rs5(startMs),cur=from;
+function generateRealRoster(ac,dep,startMs,days,legsPerDay,from,nx,twin,previous=null){
+  const p=rsProfile(ac);let legs=[],t=twin?.src==="pf"?startMs:rs5(startMs),cur=from;
   /* Nem a grade RPL nem a escala simulada incluem traslado automático. */
   if(cur!==dep)return{err:"position",from:cur,to:dep};
-  const ctx={p,ac,days,legsPerDay:p.cls==="wb"?1:(legsPerDay||1),finalTarget:nx?nx.dep:null,nxStart:nx?nx.start:0,twin:cur===dep?twin||null:null};
+  const ctx={p,ac,days,legsPerDay:p.cls==="wb"?1:(legsPerDay||1),finalTarget:nx?nx.dep:null,nxStart:nx?nx.start:0,twin:cur===dep?twin||null:null,previous};
   const multi=days>1||ctx.legsPerDay>1;
   /* preferência: voltar à base no fim (como as escalas reais); se não houver, termina onde a malha real levar */
   let r=null;
   if(ctx.finalTarget)r=realRoster(ctx,t,cur,ctx.finalTarget);
   else{if(multi)r=realRoster(ctx,t,cur,dep);if(!r)r=realRoster(ctx,t,cur,null)}
-  if(!r)return{err:ctx.finalTarget?"nx_real":"noreal_chain",from:cur};
+  if(!r)return{err:previous?"no_alternative":ctx.finalTarget?"nx_real":"noreal_chain",from:cur};
   return{legs:legs.concat(r),free:!ctx.finalTarget}}
 
 function rsTwinNote(R){const w=R&&R.twinInfo;if(!w)return"";
   return R.twin&&R.twin.src==="pf"?`<div class="notice rs-twin ok">✈ ${t("pf_note",{cs:esc(R.twin.cs),icao:esc(R.dep)})}</div>`:""}
 
 /* gera uma escala válida (até 120 tentativas) */
-function generateRoster(acId,dep,startMs,days,legsPerDay=0,twin=null){
+function generateRoster(acId,dep,startMs,days,legsPerDay=0,twin=null,previous=null){
   const ac=acById(acId);if(!ac)return{err:"ac"};
   if(!AIRPORTS||!RS_AP||Object.keys(AIRPORTS).length<1000){loadRosterAirports();return{err:"loading"}}
   dep=String(dep||"").replace(/[^A-Z0-9]/gi,"").toUpperCase();
@@ -245,19 +267,21 @@ function generateRoster(acId,dep,startMs,days,legsPerDay=0,twin=null){
   /* sem grade real para esta aeronave (companhia sem voos cadastrados, ou nenhum voo real saindo de onde ela está
      nas próximas 48 h): libera voos fictícios, marcados como simulados */
   const realOk=SCHED&&hasRealSched(ac)&&((twin&&twin.src==="pf")||realDeps(schedIcao(ac),dep,startMs,startMs+48*36e5).some(f=>rsRealOk(p,ac,f)));
-  if(realOk){let r=twin?generateRealRoster(ac,dep,Math.min(startMs,twin.seq[0].std),days,legsPerDay,from,nx,twin):null;
-   if(r&&r.err){r=null;twin.state="nochain"}                 /* não fecha a escala começando pelo voo real: gera a normal */
-   if(!r)r=generateRealRoster(ac,dep,startMs,days,legsPerDay,from,nx);if(r.err)return r;
+  if(realOk){let r=twin?generateRealRoster(ac,dep,Math.min(startMs,twin.seq[0].std),days,legsPerDay,from,nx,twin,previous):null;
+   if(r&&r.err){if(previous)return r;r=null;twin.state="nochain"}                 /* não fecha a escala começando pelo voo real: gera a normal */
+   if(!r)r=generateRealRoster(ac,dep,startMs,days,legsPerDay,from,nx,null,previous);if(r.err)return r;
    const v=rsValidate({ac},r.legs);
    if(v&&v.sequence)return v.sequence;
    if(v==="past")return{err:"past"};if(v&&v.busy)return{err:"busy",r:v.busy};if(v&&v.mine)return{err:"mine",r:v.mine};if(v&&v.aog)return{err:"aog",w:v.aog};
    const fno=rsFno(ac);r.legs.forEach(L=>{if(!L.flightNo)L.flightNo=fno(L)});
    return{acId:ac.id,dep,days,cls:p.cls,legs:r.legs,real:true,src:SCHED.month,createdAt:Date.now(),twin:r.legs.some(L=>L.twin)?{cs:r.legs.filter(L=>L.twin).map(L=>L.flightNo).join(", "),n:r.legs.filter(L=>L.twin).length,src:twin.src,state:"ok"}:null}}
   const ctx={p,ac,home:dep,from,startMs:rs5(startMs),days,hubs,country,finalTarget:nx?nx.dep:null,legsPerDay:p.cls==="wb"?0:(legsPerDay||1)};
-  let last=null;
+  let last=null,skippedPlan=false;
   for(let i=0;i<120;i++){
     const r=rsAttempt(ctx);if(r.err){last=r;if(r.err==="far")return{err:"far",from:r.from,to:dep};continue}
+    if(rsSamePlan(r.legs,previous)){skippedPlan=true;continue}
     const v=rsValidate(ctx,r.legs);
+    if(previous&&v){skippedPlan=true;continue}
     if(v&&v.sequence)return v.sequence;
     if(v==="past")return{err:"past"};
     if(v&&v.busy)return{err:"busy",r:v.busy};
@@ -266,6 +290,7 @@ function generateRoster(acId,dep,startMs,days,legsPerDay=0,twin=null){
     if(nx&&r.legs[r.legs.length-1].sta+25*6e4>nx.start){last={err:"nx"};continue}
     const fno=rsFno(ac);r.legs.forEach(L=>L.flightNo=fno(L));
     return{acId:ac.id,dep,days,cls:p.cls,legs:r.legs,sim:true,createdAt:Date.now()}}
+  if(skippedPlan)return{err:"no_alternative"};
   if(last&&last.err==="nx")return{err:"nx",r:nx};
   return{err:"none"}}
 
@@ -314,34 +339,69 @@ const rsSoonest=()=>Math.ceil(rsEarliest()/(5*6e4))*5*6e4;
    A manual aircraft or airline selection remains editable and is not overwritten. */
 function rsApplyFavorite(){
  if(RS.roster||RS.busy||!AIRPORTS?.[RS.dep]||!fleet.length)return;
- const key=JSON.stringify([myId,RS.dep,!!RS.other,RS.other?'':pfKey(RS.pf)]);
+ const key=JSON.stringify([myId,RS.dep,!!RS.other,RS.other?ACP.rs.al:pfKey(RS.pf)]);
  if(RS.favoriteContext===key)return;
  RS.favoriteContext=key;
- if(!RS.other&&!RS.pf&&rsSoonFlights(RS.dep).length)return;
+ if(!RS.other&&!RS.pf)return;
  const eligible=RS.pf&&!RS.other?rsPfAircraft(RS.pf):fleet.filter(a=>{
-  const at=locAt(a.id,RS.start);return(!at||at===RS.dep)&&!movingNow(a.id)&&statusOf(a.id).key!=='bad'
+  const at=locAt(a.id,RS.start);return(ACP.rs.al==="all"||a.airline===ACP.rs.al)&&(!at||at===RS.dep)&&!movingNow(a.id)&&statusOf(a.id).key!=='bad'
    &&!data.reservations.some(r=>r.aircraftId===a.id&&booked(r)&&r.end>Date.now());
  });
  const favorite=eligible.find(a=>isFav(a.id));if(!favorite)return;
  RS.ac=favorite.id;ACP.rs.al=favorite.airline||'all';ACP.rs.q='';
 }
-function rsRplUnavailable(){return !!(SCHED?.idx&&AIRPORTS?.[RS.dep]&&!rsSoonFlights(RS.dep).length)}
-function rsRplNone(){return !!(SCHED?.idx&&(!AIRPORTS?.[RS.dep]||rsRplUnavailable()))}
-function rsRplButtonDisabled(){return !!(RS.busy||!SCHED?.idx||!AIRPORTS?.[RS.dep]||rsRplUnavailable())}
-function rsRplIntroHTML(){return ''}
-document.addEventListener('click',event=>{if(event.target.closest('[data-action="rs-rpl-info"]'))showRplHelp()});
+const rsRplFavorite=()=>typeof myFavAirline==="function"?myFavAirline():"";
+const rsRosterFlights=(dep=RS.dep)=>rsSoonFlights(dep,rsRplFavorite());
+function rsRplButtonDisabled(){return RS.busy||!rsRosterFlights().length}
+function rsRplStatusHTML(){
+  if(SCHED&&!AIRPORTS?.[RS.dep])return "";
+  const favorite=rsRplFavorite();
+  const key=!SCHED?(schedFailed?"scheduleError":"scheduleLoading"):favorite?"noFavoriteFlights":"noFlights";
+  return `<span role="status">${esc(rplHelpText(key).replace("{icao}",RS.dep).replace("{airline}",favorite))}</span>${key==="scheduleError"?` <button class="btn small" type="button" data-action="rs-rpl-retry">${esc(rplHelpText("retry"))}</button>`:""}`;
+}
+let rsScheduleRefresh=null;
+function rsRefreshSchedule(){
+  if(rsScheduleRefresh)return;
+  const retry=schedFailed;
+  const pending=loadSchedule();
+  if(retry&&view==="roster")rsRepaintDep();
+  rsScheduleRefresh=pending.then(()=>{
+    rsScheduleRefresh=null;
+    if(view==="roster")render();
+  });
+}
+function rsFlipRplCard(option,open){
+  const front=option.querySelector('.rs-rpl-front'),back=option.querySelector('.rs-rpl-back');
+  const info=front.querySelector('.rs-rpl-info');
+  option.classList.toggle('is-flipped',open);
+  info.setAttribute('aria-expanded',String(open));
+  const outgoing=open?front:back,incoming=open?back:front;
+  incoming.inert=false;
+  incoming.querySelector(open?'[data-action="rs-rpl-info-close"]':'.rs-rpl-info').focus({preventScroll:true});
+  outgoing.inert=true;
+}
+document.addEventListener('click',event=>{
+  const button=event.target.closest('[data-action="rs-rpl-info"],[data-action="rs-rpl-info-close"]');
+  if(!button)return;
+  rsFlipRplCard(button.closest('.rs-rpl-option'),button.dataset.action==='rs-rpl-info');
+});
+document.addEventListener('keydown',event=>{
+  if(event.key!=='Escape')return;
+  const option=event.target.closest('.rs-rpl-option.is-flipped');
+  if(option){event.preventDefault();rsFlipRplCard(option,false)}
+});
+document.addEventListener("click",event=>{if(event.target.closest('[data-action="rs-rpl-retry"]'))rsRefreshSchedule()});
 function rsDefaults(){
-  if(!RS.roster&&rsRplUnavailable()){RS.other=true;RS.pf=null}
   /* companhia primeiro: sem companhia escolhida não há aeronave (a escala salva traz a sua) */
   if(RS.roster){const a=acById(RS.roster.acId);if(a&&RS.ac!==a.id){RS.ac=a.id;ACP.rs.al=a.airline||"all"}}
-  else{const eligible=RS.other?[]:rsSoonFlights(RS.dep);const rplList=eligible,rpl=rplList.length>0;
-    if(RS.pf&&!rplList.some(x=>pfKey(x)===pfKey(RS.pf)))RS.pf=null;
-    if(rpl&&!RS.pf)RS.ac="";                                                             /* com RPL: primeiro o voo */
-    else if(RS.pf&&!RS.other){ACP.rs.al=RS.pf.al;if(RS.ac&&!rsPfAircraft(RS.pf).some(a=>a.id===RS.ac))RS.ac=""}
-    else if(!RS.other){
-      /* Sem posição registrada, a aeronave pode começar aqui. Só descarte uma escolha
-         quando ela já tiver uma posição conhecida em outro aeródromo. */
-      const at=RS.ac&&locAt(RS.ac,RS.start);if(at&&at!==RS.dep)RS.ac="";
+  else{
+    if(!RS.other){
+      if(RS.pf){
+        RS.pf=rsRosterFlights().find(x=>pfKey(x)===pfKey(RS.pf))||null;
+        if(!RS.pf)RS.err=t("pf_window");
+      }
+      if(!RS.pf)RS.ac="";
+      else{RS.start=RS.pf.f.std;ACP.rs.al=RS.pf.al;if(RS.ac&&!rsPfAircraft(RS.pf).some(a=>a.id===RS.ac))RS.ac=""}
     }
     else if(ACP.rs.al==="all")RS.ac="";else{const a=acById(RS.ac);if(a&&a.airline!==ACP.rs.al)RS.ac=""}}
   /* primeira saída: a partir de 30 min depois de agora */
@@ -382,14 +442,16 @@ document.addEventListener("click",e=>{const b=e.target.closest('[data-action="rs
   b.parentNode.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)))});
 /* ---------- partida primeiro: o que há no aeródromo escolhido ---------- */
 const ICAO_AL=()=>{const m={};for(const [n,c] of Object.entries(AIRLINE_ICAO||{}))if(!m[c])m[c]=n;return m};
-function rsAirportHeadingHTML(){const dep=RS.dep;return AIRPORTS?.[dep]?`<div class="rs-di-airport"><b>${esc(dep)}</b><span class="muted">${esc(AIRPORTS[dep][3]||'')}</span></div>`:''}
-function rsGroundHTML(){return AIRPORTS?.[RS.dep]?adsbGroundHTML(RS.dep):''}
+function rsAirportHeadingHTML(){const dep=RS.dep,airport=AIRPORTS?.[dep];
+  if(!airport)return "";
+  const location=[airport[4],airport[5]].filter(Boolean).join(" · ");
+  return `<div class="rs-di-airport"><b>${esc(dep)}</b><span class="muted">${esc(airport[3]||"")}</span>${location?`<span class="dv-location">${esc(location)}</span>`:""}</div>`}
 function rsDepInfoHTML(includeHeading=true){
   const dep=RS.dep;if(!/^[A-Z0-9]{4}$/.test(dep||"")||!AIRPORTS||!AIRPORTS[dep])return"";
   const at=Math.max(RS.start||0,Date.now()),here=aircraftAt(dep,at);
   /* companhias com voos reais saindo daqui (grade RPL/ANAC) */
   const names=ICAO_AL(),als=SCHED&&SCHED.idx?Object.keys(SCHED.idx).filter(c=>SCHED.idx[c][dep]&&SCHED.idx[c][dep].length).map(c=>names[c]||c):[];
-  const rpl=!RS.other?rsSoonFlights(dep):[];
+  const rpl=!RS.other?rsRosterFlights(dep):[];
   const byAl={};here.forEach(a=>{byAl[a.airline||"—"]=(byAl[a.airline||"—"]||0)+1});
   let html=includeHeading?rsAirportHeadingHTML():'';
   if(RS.other)return html;
@@ -406,11 +468,13 @@ const rsHere=()=>/^[A-Z0-9]{4}$/.test(RS.dep||"")&&AIRPORTS&&AIRPORTS[RS.dep]?ai
    O piloto escolhe um voo e somente aeronaves livres do modelo/família do RPL. */
 // Saídas entre 30 e 90 minutos a partir de agora.
 const rsRplWindow=()=>[rsEarliest(),Date.now()+90*6e4];
-function rsSoonFlights(dep){
+function rsSoonFlights(dep,airline=""){
   if(!SCHED||!SCHED.idx||!AIRPORTS||!AIRPORTS[dep])return[];
   const [t0,t1]=rsRplWindow(),names=ICAO_AL(),inFleet=new Set(fleet.map(a=>a.airline)),out=[];
   for(const code in SCHED.idx){if(!(SCHED.idx[code]||{})[dep])continue;
-    const al=Object.keys(AIRLINE_ICAO||{}).find(n=>AIRLINE_ICAO[n]===code&&inFleet.has(n))||(inFleet.has(names[code])?names[code]:null);if(!al)continue;
+    const al=airline?(AIRLINE_ICAO[airline]===code&&inFleet.has(airline)?airline:null):
+      Object.keys(AIRLINE_ICAO||{}).find(n=>AIRLINE_ICAO[n]===code&&inFleet.has(n))||(inFleet.has(names[code])?names[code]:null);
+    if(!al)continue;
     for(const f of realDeps(code,dep,t0,t1)){if(rsPfAircraft({al,f}).length)out.push({al,code,f})}}
   return out.sort((a,b)=>a.f.std-b.f.std||a.al.localeCompare(b.al))}
 /* Aeronaves sem histórico podem iniciar no RPL. Quando já há posição registrada,
@@ -420,33 +484,79 @@ function rsSoonFlights(dep){
 function rsPfAircraft(pf){if(!pf||!pf.f)return[];const now=Date.now(),nm=rsNm(pf.f.dep,pf.f.arr);
   return fleet.filter(a=>{const at=locAt(a.id,pf.f.std),p=rsProfile(a);return a.airline===pf.al&&(!at||at===pf.f.dep)&&rsRealOk(p,a,pf.f)&&nm<=p.range&&!movingNow(a.id)&&statusOf(a.id).key!=="bad"
     &&!data.reservations.some(r=>r.aircraftId===a.id&&booked(r)&&r.end>now)})}
+function rsOpenRpl(flight){
+  if(RS.busy)return;
+  if(rosterMenuLocked())return showRosterLocked();
+  const favorite=rsRplFavorite();
+  if(favorite&&flight.al!==favorite){
+    const key=pfKey(flight);
+    flight=rsRosterFlights(flight.f.dep).find(x=>pfKey(x)===key);
+    if(!flight)return toast(rplHelpText("favoriteOnly").replace("{airline}",favorite));
+  }
+  const planes=rsPfAircraft(flight);
+  if(!planes.length)return toast(t("pf_window"));
+  Object.assign(RS,{other:false,dep:flight.f.dep,depSet:true,pf:flight,start:flight.f.std,roster:null,err:"",
+    touched:true,rplEntry:true,favoriteContext:null,ac:planes.find(a=>isFav(a.id))?.id||(planes.length===1?planes[0].id:"")});
+  ACP.rs.al=flight.al;ACP.rs.q="";
+  rsSave();view="roster";render();window.scrollTo(0,0);
+}
 /* Aeródromo coberto pelo RPL: só os registros que trazem modelo RPL contam aqui.
    As linhas sem tipo vêm da grade complementar da ANAC e não podem definir compatibilidade. */
 const rsHasRpl=dep=>!!(SCHED&&SCHED.idx&&dep&&Object.keys(SCHED.idx).some(c=>(SCHED.idx[c][dep]||[]).some(f=>f[6]&&RS_FAM[f[6]])));
-const rsRplMode=()=>!RS.other&&rsSoonFlights(RS.dep).length>0;
-const pfKey=x=>x?`${x.code}${x.f.fno}@${x.f.std}`:"";
-function rsPfCard(x){const block=Number.isFinite(x.f.blk)?x.f.blk:Number.isFinite(x.f.sta)?Math.round((x.f.sta-x.f.std)/60000):null;return `<span class="rs-pf-card-body"><small class="rs-pf-date">${esc(cap1(dtfDay(x.f.std)))}</small><strong class="rs-pf-flight">${alSym(x.al)}${esc((AIRLINE_IATA[x.al]||x.code)+' '+x.f.fno)}</strong><span class="mono rs-pf-route">${esc(x.f.dep||RS.dep)} → ${esc(x.f.arr)}</span><small class="mono rs-pf-block">${utcHM(x.f.std)}Z · ${block===null?'—':hhmm(Math.max(0,block))}</small></span>`}
+const pfKey=x=>x?`${x.code}${x.f.fno}@${x.f.dep}-${x.f.arr}@${x.f.std}`:"";
+function rsFreeModeStyle(){
+  const favorite=myFavAirline();
+  if(!favorite||!LIVERY[favorite])return "";
+  const {duration,durationInk}=rsPfTimeColors(favorite);
+  return ` style="--free-roster-bg:${duration};--free-roster-ink:${durationInk}"`;
+}
+function rsPfTimeColors(airline){
+ const palette=typeof LIVERY!=="undefined"&&LIVERY[airline]||["#0B6A93","#2C4A6B"];
+ const dep=palette[0];let duration=palette[1]||dep;
+ if(duration.toLowerCase()===dep.toLowerCase())duration=faMix(dep,"#000000",.35);
+ const ink=color=>faContrast(color,"#ffffff")>=faContrast(color,"#111111")?"#ffffff":"#111111";
+ return{dep,duration,depInk:ink(dep),durationInk:ink(duration)};
+}
+function rsPfDate(ms){
+ const locales=navigator.languages||[navigator.language];
+ const locale=locales.find(value=>value&&value.toLowerCase().startsWith(lang.toLowerCase()+"-"))||LOCALE[lang]||navigator.language;
+ /* navigator.languages pode trazer uma tag inválida (ex.: "en-US@posix" em alguns sistemas Linux);
+    sem o try/catch, o Intl.DateTimeFormat lança e quebra a tela toda */
+ try{return new Intl.DateTimeFormat(locale,{day:"2-digit",month:"2-digit",year:"numeric"}).format(ms)}
+ catch(e){return new Intl.DateTimeFormat(LOCALE[lang]||"en-GB",{day:"2-digit",month:"2-digit",year:"numeric"}).format(ms)}
+}
+function rsPfCard(x){const block=Number.isFinite(x.f.blk)?x.f.blk:Number.isFinite(x.f.sta)?Math.round((x.f.sta-x.f.std)/60000):null;const colors=rsPfTimeColors(x.al);return `<span class="rs-pf-card-body" style="--rs-time-dep:${colors.dep};--rs-time-duration:${colors.duration};--rs-time-dep-ink:${colors.depInk};--rs-time-duration-ink:${colors.durationInk}"><span class="rs-pf-card-top"><strong class="rs-pf-flight">${alSym(x.al)}${esc((AIRLINE_IATA[x.al]||x.code)+' '+x.f.fno)}</strong><span class="mono rs-pf-route">${esc(x.f.dep||RS.dep)} → ${esc(x.f.arr)}</span></span><span class="rs-pf-card-bottom"><small class="rs-pf-date">${esc(rsPfDate(x.f.std))}</small><small class="mono rs-pf-block"><span class="rs-pf-departure">${utcHM(x.f.std)}Z</span><span aria-hidden="true"> · </span><span class="rs-pf-duration">${block===null?'—':hhmm(Math.max(0,block))}</span></small></span></span>`}
+
 function rsPfHTML(list){
   const [t0,t1]=rsRplWindow(),cur=pfKey(RS.pf);
-  if(list.length===1&&RS.pf&&pfKey(list[0])===cur)return `<div class="rs-ac rs-pf"><span class="lbl">${RS.pf?t("rs_starting_flight"):t("pf_h",{icao:esc(RS.dep),a:fmtT(t0),b:fmtT(t1)})}</span><div class="rs-pf-single">${rsPfCard(RS.pf)}</div><small class="hint">${t("pf_hint")}</small></div>`;
-  return`<div class="rs-ac rs-pf"><span class="lbl">${RS.pf?t("rs_starting_flight"):t("pf_h",{icao:esc(RS.dep),a:fmtT(t0),b:fmtT(t1)})}</span>
-    <details class="rs-pf-options rs-secondary"><summary class="${RS.pf?'rs-pf-selected':''}">${RS.pf?rsPfCard(RS.pf):t('rs_choose_flight')}<span class="rs-pf-caret" aria-hidden="true">⌄</span></summary><div class="pf-list">${list.map(x=>`<button type="button" class="pf-i${pfKey(x)===cur?" on":""}" data-action="rs-pf" data-k="${esc(pfKey(x))}">${rsPfCard(x)}</button>`).join("")}</div></details>
+  return`<div class="rs-ac rs-pf"><div class="rs-pf-head">
+    <span class="lbl">${RS.pf?t("rs_starting_flight"):t("pf_h",{icao:esc(RS.dep),a:fmtT(t0),b:fmtT(t1)})}</span>
+    <div class="rs-pf-pages" hidden>
+      <button class="btn small" type="button" data-rpl-page="-1" aria-label="${esc(t("brf_fit_previous"))}">‹</button>
+      <span role="status"></span>
+      <button class="btn small" type="button" data-rpl-page="1" aria-label="${esc(t("brf_fit_next"))}">›</button>
+    </div></div>
+    <div class="pf-list">${list.map(x=>{const key=pfKey(x),selected=key===cur;return `<button type="button" class="pf-i${selected?" on":""}" data-action="rs-pf" data-k="${esc(key)}" aria-pressed="${selected}">${rsPfCard(x)}</button>`}).join("")}</div>
     <small class="hint">${t("pf_hint")}</small></div>`}
 
-function rsLiveriesHTML(){return RS.ac&&typeof liveryHTML==='function'?`<section class="rs-liv" data-aircraft="${esc(RS.ac)}">${liveryHTML(RS.ac,true)||`<p class="muted">${t('loading')}</p>`}</section>`:''}
+function rsLiveriesHTML(){
+  if(!RS.ac)return `<section class="rs-liv"><h3>${esc(t("rs_liveries_short"))}</h3><p class="muted">${esc(t("rs_need_ac"))}</p></section>`;
+  return typeof liveryHTML==='function'?`<section class="rs-liv" data-aircraft="${esc(RS.ac)}">${liveryHTML(RS.ac,true)||`<p class="muted">${t('loading')}</p>`}</section>`:''}
 function rsAcfHTML(){
   /* Aeródromo com RPL: o voo selecionado limita a lista ao modelo compatível da companhia. */
-  const rpl=RS.roster||RS.other?[]:rsSoonFlights(RS.dep);
+  const rpl=RS.roster||RS.other?[]:rsRosterFlights();
   if(RS.roster)return '';
-  if(!RS.other){const list=rpl;
-    if(RS.pf&&!list.some(x=>pfKey(x)===pfKey(RS.pf)))RS.pf=null;
-    if(list.length)return RS.pf?`<div class="rs-rpl-pair">${rsPfHTML(list)}<div class="rs-ac rs-rpl-aircraft"><span class="lbl">${t("aircraft")} · ${esc(RS.pf.al)}</span>${acPickerHTML("rs")}</div></div>`:rsPfHTML(list);
+  if(!RS.other){
+    if(!rpl.length)return `<div class="notice">${rsRplStatusHTML()}</div>`;
+    return RS.pf?`<div class="rs-rpl-pair">${rsPfHTML(rpl)}<div class="rs-ac rs-rpl-aircraft"><span class="lbl">${t("aircraft")} · ${esc(RS.pf.al)}</span>${acPickerHTML("rs")}</div></div>`:rsPfHTML(rpl);
   }
   return`<div class="rs-ac rs-al"><span class="lbl">${t("airline")}</span>${alPickHTML("rs",ACP.rs.al||"all")}</div>
     <div class="rs-ac"><span class="lbl">${t("aircraft")}</span>${ACP.rs.al==="all"?`<div class="acp-need">✈ ${t("rs_need_al")}</div>`:acPickerHTML("rs")}</div>`}
-function rsRepaintDep(){rsDefaults();const summary=document.getElementById("rs-sidebar-summary");if(summary)summary.innerHTML=rsSidebarSummaryHTML();const i=document.getElementById("rs-dep-info");if(i)i.innerHTML=rsDepInfoHTML(false);const a=document.getElementById("rs-acf");if(a)a.innerHTML=rsAcfHTML();
-  document.querySelectorAll('[data-action="rs-other"]').forEach(b=>{b.setAttribute('aria-pressed',String(RS.other===(b.dataset.v==='1')&&!(b.dataset.v==='0'&&rsRplButtonDisabled())));b.disabled=b.dataset.v==='0'?rsRplButtonDisabled():!!RS.busy;b.closest('.rs-rpl-option')?.classList.toggle('rs-rpl-disabled',b.disabled)});const infoBtn=document.querySelector('[data-action="rs-rpl-info"]');if(infoBtn){infoBtn.hidden=false;if(infoBtn.hidden&&RS.rplInfoAirport)RS.rplInfoAirport=null}const intro=document.querySelector('.rs-rpl-intro');if(intro)intro.outerHTML=rsRplIntroHTML();const description=document.querySelector('.rs-mode-field>small');if(description)description.textContent=RS.other?t('rs_free_card'):'';
-  const origin=document.getElementById('rs-origin-info');if(origin)origin.innerHTML=rsAirportHeadingHTML();const ground=document.getElementById('rs-ground');if(ground)ground.innerHTML=rsGroundHTML();
+function rsRepaintDep(){rsDefaults();const i=document.getElementById("rs-dep-info");if(i)i.innerHTML=rsDepInfoHTML(false);const a=document.getElementById("rs-acf");if(a)a.innerHTML=rsAcfHTML();
+  const rplDisabled=rsRplButtonDisabled();
+  document.querySelectorAll('[data-action="rs-other"]').forEach(b=>{b.setAttribute('aria-pressed',String(RS.other===(b.dataset.v==='1')&&!(b.dataset.v==='0'&&rplDisabled)));b.disabled=b.dataset.v==='0'?rplDisabled:!!RS.busy;b.closest('.rs-rpl-option')?.classList.toggle('rs-rpl-disabled',b.disabled)});
+  const status=document.querySelector('.rs-rpl-status');if(status)status.innerHTML=rplDisabled&&!RS.busy?rsRplStatusHTML():"";
+  const origin=document.getElementById('rs-origin-info');if(origin)origin.innerHTML=rsAirportHeadingHTML();
   const liveries=document.getElementById('rs-liveries');if(liveries)liveries.innerHTML=rsLiveriesHTML();
   const b=document.querySelector('#f-rs button[type=submit]');if(b&&!RS.busy)b.disabled=!RS.ac||RS.left===0||RS.left==="missing"}
 
@@ -471,27 +581,6 @@ function rdiList(dep,all){
     +g[al].sort((x,y)=>x.registration.localeCompare(y.registration)).map(a=>`<button type="button" class="acp-i rdi-i${a.id===RS.ac?" sel":""}" data-action="rs-ac-go" data-id="${esc(a.id)}" role="option">
       ${regTag(a,"")}<span class="acp-tx"><b>${esc(a.type)}</b><small>${esc(a.airline||"")}</small></span></button>`).join("")).join("")}
 
-/* ---------- ADS-B: painel de observação do aeródromo, sem efeito na escala ---------- */
-const ADSB_GROUND={},ADSB_GROUND_OPEN=new Set();
-document.addEventListener('toggle',e=>{const el=e.target;if(!el.matches?.('details[data-adsb-ground]')||!el.isConnected)return;if(el.open)ADSB_GROUND_OPEN.add(el.dataset.adsbGround);else ADSB_GROUND_OPEN.delete(el.dataset.adsbGround)},true);
-function adsbGroundHTML(dep){const c=ADSB_GROUND[dep];setTimeout(()=>adsbGroundFetch(dep),30);
-  let body="";
-  if(!c||c.busy||!c.at)body=`<p class="muted adsb-ground-st">📡 ${t("real_loading")}</p>`;
-  else if(c.err)body=`<p class="muted adsb-ground-st">📡 ${t(c.err==="missing"?"real_missing":"real_fail")}</p>`;
-  else{const list=c.list||[],show=list.slice(0,40),more=list.length-show.length;
-    body=`<div class="adsb-ground-meta">${t("adsb_ground_updated",{n:list.length,t:fmtT(c.at)})}</div>`+(show.length?`<div class="adsb-ground-list">${show.map(a=>{const id=a.reg||a.cs||a.hex||"—",extra=[a.cs&&a.cs!==a.reg?a.cs:"",a.type||""].filter(Boolean).map(esc).join(" · ");return`<span class="adsb-ground-item">${regTag({registration:id,airline:a.airline||""},id)}${extra?`<small>${extra}</small>`:""}</span>`}).join("")}</div>${more?`<div class="adsb-ground-more">${t("adsb_ground_more",{n:more})}</div>`:""}`:`<p class="muted adsb-ground-st">${t("adsb_ground_empty",{icao:esc(dep)})}</p>`)}
-  return`<details class="adsb-ground" data-adsb-ground="${esc(dep)}" ${ADSB_GROUND_OPEN.has(dep)?'open':''}><summary class="adsb-ground-head"><b>📡 ${t("adsb_ground_h")}</b><span class="adsb-ground-count">${c?.at&&!c.err&&!c.busy?t('rs_di_ac',{n:(c.list||[]).length}):''}</span></summary><div aria-live="polite"><p class="muted adsb-ground-note">${t("adsb_ground_info")}</p>${body}</div></details>`}
-function adsbGroundPatch(dep){const el=document.querySelector(`[data-adsb-ground="${dep}"]`);if(el)el.outerHTML=adsbGroundHTML(dep)}
-async function adsbGroundFetch(dep,force){
-  const A=AIRPORTS&&AIRPORTS[dep];if(!A)return;const c=ADSB_GROUND[dep]||(ADSB_GROUND[dep]={at:0,list:[]});
-  if(c.busy||(!force&&Date.now()-c.at<60e3))return;c.busy=true;
-  try{if(!sb)throw new Error("missing");const {data:d,error}=await sb.functions.invoke("adsb",{body:{lat:A[0],lon:A[1],dist:5}});
-    if(error)c.err=/not found|404|Failed to send|FunctionsFetchError|FunctionsHttpError/i.test(String(error.message||error))?"missing":"fail";
-    else{const own=new Map(fleet.map(a=>[String(a.registration||"").toUpperCase(),a.airline||""])),names=ICAO_AL();c.err=null;c.list=(d&&d.aircraft||[]).filter(a=>a&&(a.ground||(a.gs<30&&a.alt<300))&&Number(a.seen||0)<=300&&isFinite(a.lat)&&isFinite(a.lon)&&gcNm([a.lat,a.lon],A)<=3).map(a=>{const reg=String(a.reg||"").toUpperCase(),cs=String(a.cs||"").toUpperCase().replace(/\s/g,""),code=(/^([A-Z]{3})/.exec(cs)||[])[1]||"";return{reg,cs,hex:a.hex||"",type:a.type||"",airline:own.get(reg)||names[code]||""}}).sort((a,b)=>String(a.reg||a.cs||a.hex).localeCompare(String(b.reg||b.cs||b.hex)))}}
-  catch(e){c.err="missing"}finally{c.busy=false;c.at=Date.now()}
-  if(view==="roster"&&RS.dep===dep)adsbGroundPatch(dep)}
-/* a cada minuto, enquanto a tela de Escala estiver aberta */
-setInterval(()=>{if(view==="roster"&&RS.dep&&document.getElementById("rs-dep-info")&&!document.hidden)adsbGroundFetch(RS.dep)},60e3);
 document.addEventListener("click",e=>{const b=e.target.closest('[data-action="rdi-open"]');const box=document.querySelector(".rdi");
   if(b){RDI.open=!RDI.open;box.classList.toggle("open",RDI.open);b.setAttribute("aria-expanded",RDI.open);const pop=box.querySelector(".rdi-pop");pop.hidden=!RDI.open;
     if(RDI.open){const here=aircraftAt(RS.dep,Math.max(RS.start||0,Date.now()));pop.querySelector(".rdi-list").innerHTML=rdiList(RS.dep,here);const q=pop.querySelector(".rdi-q");setTimeout(()=>q.focus(),0);
@@ -500,33 +589,56 @@ document.addEventListener("click",e=>{const b=e.target.closest('[data-action="rd
   if(e.target.closest(".rdi-i")){RDI.open=false;RDI.q=""}
   const ra=e.target.closest('[data-action="rdi-al"]');if(ra){RDI.open=false;RDI.q="";ACP.rs.al=ra.dataset.v;RS.touched=true;RS.ac="";RS.roster=null;render();setTimeout(()=>acPickOpen("rs",true),0)}});
 document.addEventListener("click",e=>{const b=e.target.closest('[data-action="rs-pf"]');if(!b)return;
-  const x=rsSoonFlights(RS.dep).find(y=>pfKey(y)===b.dataset.k);if(!x)return;
+  const x=rsRosterFlights().find(y=>pfKey(y)===b.dataset.k);
+  if(!x){RS.err=t("pf_window");render();return}
   RS.pf=pfKey(RS.pf)===pfKey(x)?null:x;RS.touched=true;RS.roster=null;RS.err="";
   if(RS.pf){ACP.rs.al=x.al;RS.start=x.f.std;const ok=rsPfAircraft(x);RS.ac=ok.some(a=>a.id===RS.ac)?RS.ac:(ok.length===1?ok[0].id:"")}
   render();if(RS.pf&&!RS.ac)setTimeout(()=>acPickOpen("rs",true),0)});
-document.addEventListener("click",e=>{const b=e.target.closest('[data-action="rs-other"]');if(!b)return;
-  if(b.dataset.v==='0'&&rsRplButtonDisabled())return;
-  if(RS.busy||RS.other===(b.dataset.v==="1"))return;
-  RS.other=b.dataset.v==="1";RS.touched=true;RS.roster=null;RS.pf=null;RS.ac="";RS.err="";RS.start=rsSoonest();rsSave();
-  if(RS.other){const a=acById(RS.ac);ACP.rs.al=a?a.airline||"all":"all"}else{const here=rsHere();if(!here.some(a=>a.id===RS.ac))RS.ac=""}
-  render()});
+function rsSetMode(other){
+  if(RS.busy||RS.other===other)return false;
+  RS.other=other;
+  RS.touched=true;
+  RS.roster=null;
+  RS.pf=null;
+  RS.ac="";
+  RS.err="";
+  RS.start=rsSoonest();
+  if(other)ACP.rs.al="all";
+  rsSave();
+  return true;
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest('[data-action="rs-other"]');
+  if(!b)return;
+  if(b.dataset.v==='0'&&rsRplButtonDisabled()){b.disabled=true;render();return}
+  if(rsSetMode(b.dataset.v==="1"))render();
+});
 document.addEventListener("input",e=>{if(!e.target.classList||!e.target.classList.contains("rdi-q"))return;RDI.q=e.target.value;
   const l=e.target.parentElement.querySelector(".rdi-list");if(l)l.innerHTML=rdiList(RS.dep,aircraftAt(RS.dep,Math.max(RS.start||0,Date.now())))});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&RDI.open){const box=document.querySelector(".rdi");RDI.open=false;if(box){box.classList.remove("open");box.querySelector(".rdi-pop").hidden=true}}});
 
-function rsSidebarSummaryHTML(){const a=acById(RS.ac),f=!RS.other?RS.pf?.f:null;return `<div class="muted rs-sidebar-summary">${esc(RS.dep||'—')}${f?' → '+esc(f.arr):''}${f?`<br>${esc((AIRLINE_IATA[RS.pf.al]||RS.pf.code)+' '+f.fno)} · ${utcHM(f.std)}Z`:''}${a?`<br>${esc(a.registration)} · ${esc(a.type)}`:''}</div>`}
 function viewRoster(){
   if(rosterMenuLocked())return `<div class="panel"><h3>🔒 ${t('rs_locked_title')}</h3><p>${t('rs_locked_body')}</p><button class="btn" data-view="bookings">${t('nav_bookings')}</button></div>`;
-  loadRosterAirports();if(!SCHED)loadSchedule().then(()=>{if(view==="roster")render()});if(RS.left===null&&session)rsLoadLeft();rsDefaults();
+  loadRosterAirports();if(!SCHED&&!schedFailed)rsRefreshSchedule();if(RS.left===null&&session)rsLoadLeft();rsDefaults();
   const pos=RS.ac?locAt(RS.ac,RS.start):"";
-  const left=RS.left==="missing"?null:RS.left;
+  const left=RS.left==="missing"?null:RS.left,rplDisabled=rsRplButtonDisabled();
   const leftTxt=RS.left==="missing"?`<span class="chip bad">${t("rs_not_installed")}</span>`:left==null?"":left<0?`<span class="chip ok">${t("rs_unlimited")}</span>`:`<span class="chip ${left>0?"neutral":"bad"}">${t("rs_left",{n:left})}</span>`;
   return`
   <div class="sec-head rs-screen-head"><div><span class="eyebrow">${t("rs_eyebrow")}</span><h2>${t("rs_title")}</h2></div>${leftTxt}</div>
   <div class="panel rs-form rs-form-screen">
    <div class="rs-fld rs-mode-field"><div class="rs-modes" role="group" aria-label="${esc(t("rs_mode"))}">
-    <button type="button" class="rs-mode-card" data-action="rs-other" data-v="1" aria-pressed="${!!RS.other}" ${RS.busy?"disabled":""}><strong><span aria-hidden="true">✈</span> ${t("rs_free")}</strong></button>
-    <div class="rs-rpl-option ${rsRplButtonDisabled()?'rs-rpl-disabled':''}"><button type="button" class="rs-mode-card" data-action="rs-other" data-v="0" aria-pressed="${!RS.other&&!rsRplButtonDisabled()}" ${rsRplButtonDisabled()?'disabled':''}><strong><span aria-hidden="true">▤</span> ${t("rs_rpl")}</strong></button><button type="button" class="rs-rpl-info" data-action="rs-rpl-info" aria-label="${esc(t('rpl_what'))}" aria-haspopup="dialog">ⓘ</button></div></div><small class="muted">${RS.other?t('rs_free_card'):''}</small></div>${rsRplIntroHTML()}
+    <button type="button" class="rs-mode-card" data-action="rs-other" data-v="1" aria-pressed="${!!RS.other}"${rsFreeModeStyle()} ${RS.busy?"disabled":""}><strong><span aria-hidden="true">✈</span> ${t("rs_free")}</strong><span class="rs-mode-caption">${esc(t("rs_free_summary"))}</span></button>
+    <div class="rs-rpl-option ${rplDisabled?'rs-rpl-disabled':''}">
+      <div class="rs-rpl-card">
+       <div class="rs-rpl-front"><button type="button" class="rs-mode-card" data-action="rs-other" data-v="0" aria-pressed="${!RS.other&&!rplDisabled}" ${rplDisabled?'disabled':''}><strong><span aria-hidden="true">▤</span> ${t("rs_rpl")}</strong><span class="rs-mode-caption">${esc(t("rs_rpl_summary"))}</span></button><button type="button" class="rs-rpl-info" data-action="rs-rpl-info" aria-label="${esc(t('rpl_what'))}" aria-expanded="false" aria-controls="rs-rpl-back"><span aria-hidden="true">i</span></button></div>
+       <div class="rs-rpl-back" id="rs-rpl-back" inert>
+        <button type="button" class="rs-rpl-back-close" data-action="rs-rpl-info-close" aria-label="${esc(t("close"))}">×</button>
+        <h4>${esc(t("rpl_what"))}</h4>
+        <p>${esc(rplHelpText("source"))}</p><p>${esc(rplHelpText("window"))}</p>
+       </div>
+      </div>
+     </div>
+   </div><div class="rs-rpl-status muted">${rplDisabled&&!RS.busy?rsRplStatusHTML():""}</div></div>
    <form id="f-rs" class="rs-grid rs-balanced-grid rs-sidebar-grid"><div class="rs-sidebar-main">
     <div class="rs-top-fields"><div class="rs-origin-compact">
      <label class="rs-dep-f">${t("rs_dep")}${apInput("rs-dep",RS.dep||pos||"SBGR")}</label>
@@ -536,10 +648,10 @@ function viewRoster(){
     </div>
     <div class="rs-main-fields"><div class="rs-layout-left"><div class="rs-dep-info" id="rs-dep-info">${rsDepInfoHTML(false)}</div><div class="rs-acf" id="rs-acf">${rsAcfHTML()}</div></div>
      <div class="rs-layout-right"><div id="rs-liveries">${rsLiveriesHTML()}</div></div></div>
-    <div id="rs-ground" class="rs-ground">${rsGroundHTML()}</div></div>
-    <aside class="rs-layout-sidebar"><h3>${t('nav_roster')}</h3>${RS.other?`<label>${t("rs_start")}<input id="rs-start" type="datetime-local" required min="${toLocalInput(rsEarliest())}" value="${toLocalInput(RS.start)}"><small id="rs-start-utc" class="utc-eq"></small><small class="hint" title="${esc(t('rs_start_hint'))}">${t("rs_departure_minimum")}</small></label>`:""}<div class="rs-settings">${rsDaysField()}${rsLegsField()}</div><div id="rs-sidebar-summary">${rsSidebarSummaryHTML()}</div>
+    </div>
+    <aside class="rs-layout-sidebar"><h3>${t('nav_roster')}</h3>${RS.other?`<label>${t("rs_start")}<input id="rs-start" type="datetime-local" required min="${toLocalInput(rsEarliest())}" value="${toLocalInput(RS.start)}"><small id="rs-start-utc" class="utc-eq"></small><small class="hint" title="${esc(t('rs_start_hint'))}">${t("rs_departure_minimum")}</small></label>`:""}<div class="rs-settings">${rsDaysField()}${rsLegsField()}</div>
     <div class="rs-actions"><div><b>${t("rs_unlimited")}</b><small class="muted">${t("rs_confirmation_short")}</small><p class="form-err" ${RS.err?"":"hidden"}>${RS.err}</p></div>
-     <button class="btn primary" type="submit" ${RS.busy||left===0||RS.left==="missing"||!RS.ac?"disabled":""}>${RS.roster?t("rs_regen"):t("rs_gen")}</button></div>
+     <button class="btn primary" type="submit"${rsFreeModeStyle()} ${RS.busy||left===0||RS.left==="missing"||!RS.ac?"disabled":""}>${RS.roster?t("rs_regen"):t("rs_gen")}</button></div>
     </aside></form>
    <details class="rs-secondary rs-rules"><summary>${t("rs_rules_short")}</summary><p class="muted">${t("quota_rule",{maxac:WEEK_MAX_AC})}</p><p class="muted">${t("rs_intro")}</p><p class="hint">${t("rs_quota_note")}</p></details>
   </div>
@@ -738,7 +850,7 @@ function rosterHTML(R){
     else html+=`🏁 ${t("rs_end",{icao:wxCode(ls[ls.length-1].arr)})} · ${t("rs_release")} ${rsTime(rel)}`;
     html+=`</footer></section>`});
   html+=`${expired?"":`<p class="notice" style="margin:0 0 10px">🔒 ${t("rs_accept_lock")}</p>`}<div class="rs-accept">${expired?`<p class="notice bad" style="margin:0">${t("rs_expired")}</p>`:`<button class="btn primary" type="button" data-action="rs-accept" ${RS.busy?"disabled":""}>${RS.acceptArmedUntil>Date.now()?t("rs_accept_confirm"):t("rs_accept",{n:R.legs.length})}</button>`}
-    <button type="button" class="btn" data-action="rs-discard">${t("rs_discard")}</button></div><p class="form-err rs-accept-error" role="alert" ${RS.err?'':'hidden'}>${esc(RS.err||'')}</p></div>`;
+    <button type="button" class="btn" data-action="rs-regenerate" ${RS.busy?"disabled":""}>${t("rs_regen")}</button></div><p class="form-err rs-accept-error" role="alert" ${RS.err?'':'hidden'}>${esc(RS.err||'')}</p></div>`;
   return html}
 const dtfDay=ms=>new Intl.DateTimeFormat(LOCALE[lang],{weekday:"long",day:"2-digit",month:"short"}).format(ms);
 const ymd=ms=>{const d=new Date(ms);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
@@ -759,7 +871,7 @@ function rsShift(newYmd){
     const nx=nextAfter(ac.id,legs[0].std-20*6e4),last=legs[legs.length-1];
     if(!err&&nx&&(last.sta+25*6e4>nx.start||nx.dep!==last.arr))err=t("rs_nx",{reg,t:fmt(nx.start),icao:esc(nx.dep)})}
   if(err){RS.shiftErr=err;render();return}
-  R.legs=legs;RS.start=shiftDays(RS.start,n);RS.shiftErr="";rsSave();render()}
+  R.legs=legs;RS.start=shiftDays(RS.start,n);if(R.settings)R.settings.start=shiftDays(R.settings.start,n);RS.shiftErr="";rsSave();render()}
 document.addEventListener("change",e=>{if(e.target.id==="rs-day1"&&e.target.value){RS.pickDate=false;rsShift(e.target.value)}});
 /* o destaque piscante some quando o piloto mexe na data */
 document.addEventListener("focusin",e=>{if(e.target.id==="rs-day1"&&RS.pickDate){RS.pickDate=false;const l=e.target.closest(".rs-date");if(l)l.classList.remove("blink")}});
@@ -827,35 +939,78 @@ document.addEventListener("change",e=>{const id=e.target.id;
   if(id==="rs-ac"){RS.ac=e.target.value;RS.dep=locAt(RS.ac,RS.start)||RS.dep;RS.err="";render()}
   if(id==="rs-days")RS.days=Number(e.target.value)||1;
   if(id==="rs-legs")RS.legs=Number(e.target.value)||0;
-  if(id==="rs-start"){const ms=new Date(e.target.value).getTime();if(!isNaN(ms)){RS.start=ms;if(!RS.dep)RS.dep=locAt(RS.ac,ms)||"";if(RS.pf&&!rsSoonFlights(RS.dep).some(x=>pfKey(x)===pfKey(RS.pf)))RS.pf=null;rsRepaintDep()}}});
-document.addEventListener("input",e=>{if(e.target.id==="rs-dep"){const v=apResolve(e.target.value);RS.dep=v;RS.touched=true;
-    if(v&&AIRPORTS&&AIRPORTS[v]){RS.depSet=true;RS.pf=null;rsRepaintDep()}}
+  if(id==="rs-start"){const ms=new Date(e.target.value).getTime();if(!isNaN(ms)){RS.start=ms;if(!RS.dep)RS.dep=locAt(RS.ac,ms)||"";if(RS.pf&&!rsRosterFlights().some(x=>pfKey(x)===pfKey(RS.pf)))RS.pf=null;rsRepaintDep()}}});
+document.addEventListener("input",e=>{if(e.target.id==="rs-dep"){const v=apResolve(e.target.value);RS.touched=true;
+    if(AIRPORTS?.[v]){if(RS.dep!==v){RS.pf=null;RS.err=""}RS.dep=v;RS.depSet=true;rsRepaintDep()}}
   if(e.target.id==="rs-start")utcHint("rs-start")});
 try{new MutationObserver(()=>{const h=document.getElementById("rs-start-utc");if(h&&!h.textContent)utcHint("rs-start");
   const d=document.getElementById("rs-dep");if(d&&!d.value&&RS.dep&&!d.dataset.init){d.dataset.init="1";d.value=RS.dep}}).observe(document.body,{childList:true,subtree:true})}catch(e){}
-document.addEventListener("submit",async e=>{if(e.target.id!=="f-rs")return;e.preventDefault();
-  if(rosterMenuLocked()){showRosterLocked();return}
-  const form=e.target;RS.dep=apResolve($("#rs-dep").value)||RS.dep;RS.days=Number($("#rs-days").value)||1;
-  const ms=RS.other?new Date($("#rs-start")?.value||"").getTime():RS.pf?.f.std;if(Number.isFinite(ms))RS.start=ms;
-  if(RS.start<rsEarliest())RS.start=rsSoonest();   /* nunca menos de 30 min a partir de agora */
-  await loadRosterAirports();await loadSchedule();
-  if(!RS.ac){RS.err=t(rsHere().length?"rdi_need":ACP.rs.al==="all"?"rs_need_al":"rs_need_ac",{icao:RS.dep});render();return}
-  RS.legs=Number($("#rs-legs")?.value)||0;
-  const pfOn=!!(RS.pf&&!RS.other);
-  if(pfOn&&!rsSoonFlights(RS.dep).some(x=>pfKey(x)===pfKey(RS.pf))){RS.pf=null;RS.ac="";RS.err=t("pf_window");render();return}
-  /* ADS-B é apenas observação: somente o voo RPL escolhido pode prender a primeira perna. */
-  const twin=pfOn?{state:"try",src:"pf",cs:(AIRLINE_IATA[RS.pf.al]||RS.pf.code)+" "+RS.pf.f.fno,seq:[{fno:RS.pf.f.fno,std:RS.pf.f.std,dep:RS.pf.f.dep,arr:RS.pf.f.arr}]}:null;
-  const r=generateRoster(RS.ac,RS.dep,RS.start,RS.days,RS.legs,twin&&twin.state==="try"?twin:null);
-  if(pfOn&&!r.err&&!(r.legs[0]&&r.legs[0].twin)){RS.err=t("pf_nofit");render();return}
-  if(!r.err&&twin){r.twinInfo={state:twin.state,cs:twin.cs||"",ap:twin.ap||"",std:twin.std||0,arr:twin.arr||""}}
-  if(r.err){RS.err=rsErrText(r);render();return}
-  RS.busy=true;render();
-  const {data:left,error}=await sb.rpc("roster_roll");RS.busy=false;
-  if(error){const m=error.message||"";RS.err=/ROSTER_LIMIT/.test(m)?t("rs_err_limit"):/roster_roll|Could not find|does not exist/i.test(m)?t("rs_not_installed"):dbMessage(error);if(/ROSTER_LIMIT/.test(m))RS.left=0;render();return}
-  RS.left=left;RS.err="";RS.shiftErr="";RS.pickDate=false;RS.roster=r;RS.acceptArmedUntil=0;RS.flapAnim=true;rsSave();render();setTimeout(flapAnimate,30);
-  setTimeout(()=>{const o=document.querySelector(".rs-out");o&&o.scrollIntoView&&o.scrollIntoView({behavior:"smooth",block:"start"})},60)});
+async function rsGenerate(previous=null){
+  if(RS.busy||view!=="roster")return;
+  if(rosterMenuLocked())return showRosterLocked();
+  const first=previous?.legs[0];
+  const settings=previous?(previous.settings||{
+    start:first.std,legs:previous.legs.filter(l=>l.day===first.day).length,
+    other:!(previous.twin?.src==="pf"||first.twin),pfKey:""
+  }):{
+    start:RS.other?new Date($("#rs-start")?.value||"").getTime():RS.pf?.f.std,
+    legs:Number($("#rs-legs")?.value)||0,other:RS.other,pfKey:pfKey(RS.pf)
+  };
+  const dep=previous?.dep||(apResolve($("#rs-dep").value)||RS.dep);
+  const days=previous?.days||(Number($("#rs-days").value)||1);
+  const ac=previous?.acId||RS.ac;
+  let start=Number.isFinite(settings.start)?settings.start:RS.start;
+  if(settings.other&&start<rsEarliest())start=rsSoonest();
+  RS.err="";RS.acceptArmedUntil=0;RS.busy=true;render();
+  let generated=false;
+  try{
+    await loadRosterAirports();await loadSchedule();
+    if(view!=="roster"||RS.roster!==previous)return;
+    if(rosterMenuLocked())return showRosterLocked();
+    const pf=settings.other?null:rsRosterFlights(dep).find(x=>settings.pfKey?pfKey(x)===settings.pfKey:
+      first&&x.f.std===first.std&&x.f.dep===first.dep&&x.f.arr===first.arr&&first.flightNo===(AIRLINE_IATA[x.al]||x.code)+" "+x.f.fno);
+    if(!settings.other&&(!pf||!rsPfAircraft(pf).some(a=>a.id===ac))){
+      if(!previous){RS.pf=null;RS.ac=""}
+      RS.err=t("pf_window");return;
+    }
+    if(!ac){RS.err=t(rsHere().length?"rdi_need":ACP.rs.al==="all"?"rs_need_al":"rs_need_ac",{icao:dep});return}
+    const twin=pf?{state:"try",src:"pf",cs:(AIRLINE_IATA[pf.al]||pf.code)+" "+pf.f.fno,seq:[{fno:pf.f.fno,std:pf.f.std,dep:pf.f.dep,arr:pf.f.arr}]}:null;
+    if(pf)start=pf.f.std;
+    const r=generateRoster(ac,dep,start,days,settings.legs,twin,previous?.legs);
+    if(r.err){RS.err=r.err==="no_alternative"?t("rs_no_alternative"):rsErrText(r);return}
+    if(pf&&!r.legs[0]?.twin){RS.err=t("pf_nofit");return}
+    if(twin)r.twinInfo={state:twin.state,cs:twin.cs,ap:"",std:0,arr:""};
+    const {data:left,error}=await sb.rpc("roster_roll");
+    if(error){
+      const m=error.message||"";
+      RS.err=/ROSTER_LIMIT/.test(m)?t("rs_err_limit"):/roster_roll|Could not find|does not exist/i.test(m)?t("rs_not_installed"):dbMessage(error);
+      if(/ROSTER_LIMIT/.test(m))RS.left=0;
+      return;
+    }
+    RS.left=left;
+    if(view!=="roster"||RS.roster!==previous)return;
+    Object.assign(RS,{ac,dep,start,days,legs:settings.legs,other:settings.other,pf,err:"",shiftErr:"",pickDate:false,roster:r,flapAnim:true});
+    r.settings={...settings,start,pfKey:pfKey(pf)};
+    rsSave();
+    generated=true;
+  }catch(error){
+    RS.err=dbMessage(error);
+  }finally{
+    RS.busy=false;
+    if(view==="roster")render();
+    if(generated){
+      setTimeout(flapAnimate,30);
+      setTimeout(()=>document.querySelector(".rs-out")?.scrollIntoView({behavior:"smooth",block:"start"}),60);
+    }
+  }
+}
+document.addEventListener("submit",e=>{
+  if(e.target.id!=="f-rs")return;
+  e.preventDefault();
+  rsGenerate();
+});
 document.addEventListener("click",async e=>{const el=e.target.closest('[data-action^="rs-"]');if(!el)return;const a=el.dataset.action;
-  if(a==="rs-discard"){RS.shiftErr="";RS.roster=null;rsSave();render()}
+  if(a==="rs-regenerate"&&RS.roster){await rsGenerate(RS.roster);return}
   if(a==="rs-accept"&&RS.roster){
     e.preventDefault();if(RS.busy)return;if(rosterMenuLocked())return showRosterLocked();
     if(!(RS.acceptArmedUntil>Date.now())){RS.acceptArmedUntil=Date.now()+10000;el.textContent=t('rs_accept_confirm');setTimeout(()=>{if(RS.acceptArmedUntil<=Date.now()){RS.acceptArmedUntil=0;const button=document.querySelector('[data-action="rs-accept"]');if(button&&RS.roster&&!RS.busy)button.textContent=t('rs_accept',{n:RS.roster.legs.length})}},10050);return}

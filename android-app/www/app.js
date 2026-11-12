@@ -13,7 +13,8 @@ try{if(!recovering&&/[?&](cadastro|signup)(=|&|$)/.test(location.search))authMod
 const data={fleets:[],aircraft:[],reservations:[],flights:[],defects:[],support:[]};
 const loaded={fleets:true,aircraft:false};
 let fleet=[],fleetById={};
-let booting=true,view="fleet",sheet=null,names={},renderToken=0,storeError=null;
+let booting=true,view="fleet",sheet=null,names={},renderToken=0;
+const storeErrors=new Set(),loadRequests=new Map();
 let catQuery="";
 let fAirline="all",fStatus="all",fQuery="",fLimit=60,fFav=false,fRegion="all";
 let fleetGeoVersion=0;
@@ -31,13 +32,14 @@ function fleetPreferredFavorite(country){return fleet.filter(a=>isFav(a.id)&&a.a
   return Number(local(b))-Number(local(a))||a.airline.localeCompare(b.airline)||a.registration.localeCompare(b.registration)
 })[0]||null}
 async function fleetOpenHomeRegion(){const version=++fleetGeoVersion;
+  if(typeof flIsFree==="function"&&flIsFree())return;
   let country='';
   try{await loadAirports();let code=typeof RS_HOME!=="undefined"?RS_HOME.dep:"";
     if(!code||!AIRPORTS[code]){const pos=typeof lpGeoPos==="function"?await lpGeoPos():null;let distance=500;code='';
       if(pos)for(const [c,a] of Object.entries(AIRPORTS)){const d=gcNm([pos.lat,pos.lon],[a[0],a[1]]);if(d<distance&&a[5]){distance=d;code=c}}}
     country=AIRPORTS?.[code]?.[5]||'';
   }catch(e){}
-  if(view!=="fleet"||version!==fleetGeoVersion)return;
+  if(view!=="fleet"||version!==fleetGeoVersion||(typeof flIsFree==="function"&&flIsFree()))return;
   const favorite=fleetPreferredFavorite(country);if(!favorite&&!country)return;
   fRegion=favorite?regionOf(favorite.airline):fleetRegionForCountry(country);fAirline=favorite?favorite.airline:"all";
   fStatus="all";fQuery="";fLimit=60;fFav=false;if(favorite)selAc=favorite.id;render();
@@ -60,7 +62,7 @@ let installPrompt=null;
 const ms=v=>v?new Date(v).getTime():null;
 const MAP={
   aircraft:r=>({id:r.registration,registration:r.registration,type:r.type,airline:r.airline||"",base:r.base||"",fleet:r.fleet||"airline",owner:r.owner_id||null}),
-  reservations:r=>({id:r.id,aircraftId:r.aircraft_id,pilotId:r.pilot_id,dep:r.dep,arr:r.arr,route:r.route||"",flightNo:r.flight_no||"",ferry:!!r.ferry,eventId:r.event_id||null,rosterId:r.roster_id||null,start:ms(r.start_at),end:ms(r.end_at),status:r.status,ackAt:ms(r.ack_at),flightId:r.flight_id,cancelReason:r.cancel_reason||null,dlaAt:ms(r.dla_at),eobtOrig:ms(r.eobt_orig)}),
+  reservations:r=>({id:r.id,aircraftId:r.aircraft_id,pilotId:r.pilot_id,dep:r.dep,arr:r.arr,route:r.route||"",flightNo:r.flight_no||"",ferry:!!r.ferry,eventId:r.event_id||null,rosterId:r.roster_id||null,singleFlight:r.single_flight===true,start:ms(r.start_at),end:ms(r.end_at),status:r.status,ackAt:ms(r.ack_at),flightId:r.flight_id,cancelReason:r.cancel_reason||null,dlaAt:ms(r.dla_at),eobtOrig:ms(r.eobt_orig)}),
   flights:r=>({id:r.id,aircraftId:r.aircraft_id,reservationId:r.reservation_id,pilotId:r.pilot_id,dep:r.dep,arr:r.arr,simulator:r.simulator,blockMin:r.block_min,remarks:r.remarks,createdAt:ms(r.created_at),verified:r.verified!==false,trackId:r.track_id||null,landingFpm:r.landing_fpm??null}),
   defects:r=>({id:r.id,aircraftId:r.aircraft_id,flightId:r.flight_id,reservationId:r.reservation_id,reporterId:r.reporter_id,catalogId:r.catalog_id,ata:r.ata,title:r.title,description:r.description,
     phase:r.phase,simulator:r.simulator,outcome:r.outcome,repairH:r.repair_h,deferDays:r.defer_days,deferredUntil:ms(r.deferred_until),opsProcedure:r.ops_procedure,createdAt:ms(r.created_at),voidedAt:ms(r.voided_at)}),
@@ -78,11 +80,15 @@ async function fetchAll(table){
   return out;
 }
 async function load(table){
+  const request=Symbol(table);
+  loadRequests.set(table,request);
   try{
-    if(table==="profiles"){const rows=await fetchAll("profiles");rows.forEach(p=>names[p.id]=p.display_name||"");isAdmin=!!(rows.find(p=>p.id===myId)||{}).is_admin;if(typeof flOnProfiles==="function")flOnProfiles(rows);}
-    else{data[table]=(await fetchAll(table)).map(MAP[table]);if(table==="aircraft"){loaded.aircraft=true;rebuildFleet()}}
-    storeError=null; saveCache();
-  }catch(e){console.error(table,e);if(navigator.onLine)storeError=true}
+    const rows=await fetchAll(table);
+    if(loadRequests.get(table)!==request)return;
+    if(table==="profiles"){rows.forEach(p=>names[p.id]=p.display_name||"");isAdmin=!!(rows.find(p=>p.id===myId)||{}).is_admin;if(typeof flOnProfiles==="function")flOnProfiles(rows);}
+    else{data[table]=rows.map(MAP[table]);if(table==="aircraft"){loaded.aircraft=true;rebuildFleet()}}
+    storeErrors.delete(table);saveCache();
+  }catch(e){if(loadRequests.get(table)!==request)return;console.error(table,e);storeErrors.add(table)}
 }
 function rosterMenuLocked(pilotId=myId,now=Date.now()){return data.reservations.some(r=>r.pilotId===pilotId&&booked(r)&&r.end>now)}
 function showRosterLocked(){openSheet('roster-locked',`${head('',t('rs_locked_title'))}<p>${t('rs_locked_body')}</p><button class="btn primary" data-view="bookings">${t('nav_bookings')}</button>`)}
@@ -97,10 +103,9 @@ async function loadEverything(){
   /* ao abrir o app (uma vez por login), quem tem favoritas começa vendo só elas na Frota */
   /* ao abrir o app (uma vez por login): quem tem favoritas vê só elas na Frota */
   if(!favStart&&session){favStart=true;if(favs.size){fFav=true;fRegion="all";fAirline="all";fStatus="all";fQuery=""}
-    /* quem tem escala ativa (voos reservados ainda por vir ou em andamento) começa em Reservas;
-       os demais, na Escala (já com a cidade/país do piloto) */
-    const now=Date.now(),hasRoster=data.reservations.some(r=>r.pilotId===myId&&r.rosterId&&r.status==="booked"&&r.end>now);
-    view=hasRoster?"bookings":"roster";if(typeof rsHomeInit==="function")rsHomeInit()}
+    /* Abre a programação quando há uma escala ou um voo livre reservado. */
+    const now=Date.now(),hasScheduledFlight=data.reservations.some(r=>r.pilotId===myId&&(r.rosterId||r.singleFlight)&&booked(r)&&r.end>now);
+    view=hasScheduledFlight?"bookings":"roster";if(typeof rsHomeInit==="function")rsHomeInit()}
   render();
   if(expP)expP.then(async()=>{const before=JSON.stringify(data.reservations.map(r=>r.id+r.status));await load("reservations");if(JSON.stringify(data.reservations.map(r=>r.id+r.status))!==before)render()})}
 let lastFullLoad=0;
@@ -253,7 +258,7 @@ function paintChrome(){
   document.documentElement.lang=lang; $("#lang").value=lang; $("#tag").textContent=t("tag"); paintFlags();
   paintThemeBtn();
   $("#tabs").innerHTML=["roster","briefing","bookings","logbook","fleet","map","catalog","events","manual","support",...(IS_ADMIN()?["admin"]:[])].map(v=>{const lockedRoster=v==='roster'&&rosterMenuLocked(),off=lockedRoster||(v==='briefing'&&!(typeof briefingEnabled==='function'&&briefingEnabled()));return`<button class="tab${off?' tab-off':''}" data-view="${v}" ${lockedRoster?'aria-disabled="true"':''} title="${esc(lockedRoster?'🔒 '+t('rs_locked_title'):off?'🔒 '+t('brf_locked'):t('nav_'+v))}" aria-current="${v===view?'page':'false'}">${NAV_ICON[v]}<span>${t('nav_'+v)}</span></button>`}).join("");
-  const pt=$("#page-title");if(pt)pt.textContent=session&&!recovering?t("nav_"+view):"";
+  const pt=$("#page-title");if(pt)pt.textContent=session&&!recovering?t(view==="ranking"?"lb_tab_ranking":"nav_"+view):"";
   paintClock();if(typeof paintBell==="function")paintBell();
   const pl=$("#palette");if(pl){const cur=getPalette(),nm=k=>t("pal_"+k).replace(/^[^:：]+[:：]\s*/,"");pl.setAttribute("aria-label",t("pal_title"));
     pl.innerHTML=`<span class="lay-l">${t("pal_title")} · <b>${esc(nm(cur))}</b></span><div class="pal-row">${PALETTES.map(k=>{const [sd,ac,bg]=PAL_SW[k];return`<button type="button" class="pal-btn${k===cur?" on":""}" data-pal="${k}" title="${esc(nm(k))}" aria-label="${esc(nm(k))}" aria-pressed="${k===cur}"><svg viewBox="0 0 30 20" width="30" height="20" aria-hidden="true"><rect width="30" height="20" rx="3" fill="${bg}"/><rect width="9" height="20" rx="3" fill="${sd}"/><rect x="7" width="2" height="20" fill="${sd}"/><circle cx="4.5" cy="5" r="2" fill="${ac}"/><rect x="12" y="5" width="14" height="3" rx="1.5" fill="${ac}"/><rect x="12" y="11" width="10" height="2" rx="1" fill="${sd}" opacity=".35"/><rect x="12" y="15" width="12" height="2" rx="1" fill="${sd}" opacity=".35"/></svg></button>`}).join("")}</div>`}
@@ -314,6 +319,7 @@ function setPalette(v){try{localStorage.setItem("vfr-palette",v)}catch(e){}
 const splitFleet=()=>WIDE.matches&&["side","left","right"].includes(getLayout());
 try{WIDE.addEventListener("change",()=>{if(view==="fleet"){closeSheet();render()}})}catch(e){}
 async function renderApp(){
+  if(view==="support"&&IS_ADMIN()&&supportFormEditing())return;
   const token=++renderToken;
   const ids=new Set();
   data.reservations.forEach(r=>ids.add(r.pilotId));data.flights.forEach(f=>ids.add(f.pilotId));data.defects.forEach(d=>ids.add(d.reporterId));ids.delete(undefined);ids.delete(null);
@@ -322,7 +328,7 @@ async function renderApp(){
   paintChrome();
   const v=$("#view"),head=[];
   if(!navigator.onLine)head.push(`<div class="notice">${esc(t("offline_banner"))}</div>`);
-  else if(storeError)head.push(`<div class="notice bad">${esc(t("store_error"))}</div>`);
+  else if(storeErrors.size)head.push(`<div class="notice bad">${esc(t("store_error"))}</div>`);
   if(canWrite===false)head.push(`<div class="notice">${esc(t("no_access"))}</div>`);
   const cancelled=myCancelled();
   cancelled.forEach(r=>head.push(`<div class="notice bad alt-notice"><span>${t("cancelled_notice",{reg:`${regTag(acById(r.aircraftId),r.aircraftId)}`,t:fmt(r.start)})}</span>
@@ -333,12 +339,19 @@ async function renderApp(){
   {const d=$(".detail");renderApp.dScroll=d?d.scrollTop:0}
   if(meBlocked)head.unshift(`<div class="notice bad">${esc(t("err_blocked"))}</div>`);
   if(view==="admin"&&!IS_ADMIN())view="fleet";
-  v.innerHTML=head.join("")+({fleet:viewFleet,map:viewMap,bookings:viewBookings,briefing:(...x)=>window.viewBriefing?window.viewBriefing(...x):viewFleet(),events:viewEvents,roster:viewRoster,logbook:viewLogbook,catalog:viewCatalog,manual:viewManual,support:viewSupport,admin:viewAdmin,live:viewLive}[view]||viewFleet)();
+  if(view==="map"&&renderApp.lastView!=="map"){
+    MAPV.airline="all";
+    MAPV.tfcData=[];
+    MAPV.tfcAt=0;
+  }
+  const html=head.join("")+({fleet:viewFleet,map:viewMap,bookings:viewBookings,briefing:(...x)=>window.viewBriefing?window.viewBriefing(...x):viewFleet(),events:viewEvents,roster:viewRoster,logbook:viewLogbook,ranking:viewRanking,catalog:viewCatalog,manual:viewManual,support:viewSupport,admin:viewAdmin,live:viewLive}[view]||viewFleet)();
+  if(view==="briefing"&&typeof brfReplaceView==="function")brfReplaceView(v,html);else v.innerHTML=html;
   decorateSkyVector(v);
   if(typeof decorateSimulatorNames==="function")decorateSimulatorNames(v);
   if(typeof reportGuardRender==="function")reportGuardRender(v);
   /* transição suave ao trocar de menu: o conteúdo novo entra com fade e leve subida, em cascata */
-  if(renderApp.lastView!==view){if(renderApp.lastView!==undefined){v.classList.remove("vt");void v.offsetWidth;v.classList.add("vt");const tb=$("#tabs");if(tb)tb.classList.add("vt");clearTimeout(renderApp.vtT);renderApp.vtT=setTimeout(()=>{v.classList.remove("vt");if(tb)tb.classList.remove("vt")},900)}renderApp.lastView=view}
+  if(renderApp.lastView!==view){if(renderApp.lastView!==undefined&&view!=="home"){v.classList.remove("vt");void v.offsetWidth;v.classList.add("vt");const tb=$("#tabs");if(tb)tb.classList.add("vt");clearTimeout(renderApp.vtT);renderApp.vtT=setTimeout(()=>{v.classList.remove("vt");if(tb)tb.classList.remove("vt")},900)}renderApp.lastView=view}
+  if(typeof homeMotionPaint==="function")homeMotionPaint();
   if(view==="map")initMap();
   hydratePhotos();
   if(view==="support")paintPixQr();
@@ -368,7 +381,7 @@ function acCard(a){
 }
 function viewFleet(){
   if(!db||!loaded.fleets||!loaded.aircraft)return offline();
-  const add=`<button class="btn primary" data-action="new-aircraft" ${canWrite===false?"disabled":""}>${t("add_aircraft")}</button>`;
+  const add=`<button class="btn primary" data-action="new-aircraft"${rsFreeModeStyle()} ${canWrite===false?"disabled":""}>${t("add_aircraft")}</button>`;
   if(!fleet.length)return`<div class="empty"><span class="eyebrow">${t("empty_eyebrow")}</span><h2>${t("empty_title")}</h2><p>${t("empty_body")}</p>${add}</div>`;
   const st={};fleet.forEach(a=>st[a.id]=statusOf(a.id).key);
   const c=k=>fleet.filter(a=>st[a.id]===k).length;
@@ -547,7 +560,7 @@ function entryHTML(f,no,showPlate){
    ${ds.length?ds.map(defectHTML).join(""):`<div class="muted" style="font-size:.85rem">${t("no_def_entry")}</div>`}</div></div>`;
 }
 function tlNumbers(){const n={},out={};[...data.flights].sort((a,b)=>a.createdAt-b.createdAt).forEach(f=>{n[f.aircraftId]=(n[f.aircraftId]||0)+1;out[f.id]=n[f.aircraftId]});return out}
-/* ---------- Diário de bordo: logbook do piloto, ranking e todos os registros ---------- */
+/* ---------- Diário de bordo e ranking de pilotos ---------- */
 let lbTab="mine",lbPilot=null,lbPeriod="all";
 const dateF=ms=>new Intl.DateTimeFormat(LOCALE[lang],{day:"2-digit",month:"2-digit",year:"numeric"}).format(ms);
 function periodStart(p){const now=new Date();if(p==="year")return new Date(now.getFullYear(),0,1).getTime();if(p==="30d")return Date.now()-30*864e5;return 0}
@@ -557,9 +570,13 @@ const vChip=f=>f.verified!==false?(f.trackId?`<span class="chip ok v-chip" title
 function groupHours(fl,keyFn){const m={};for(const f of fl){const k=keyFn(f)||"—";(m[k]=m[k]||{k,min:0,n:0}).min+=f.blockMin||0;m[k].n++}return Object.values(m).sort((a,b)=>b.min-a.min||b.n-a.n)}
 function viewLogbook(){
   if(!db)return offline();
-  const seg=`<div class="seg" role="tablist">${["mine","pay","ranking","all"].map(k=>`<button data-action="lb-tab" data-v="${k}" aria-pressed="${lbTab===k}">${t("lb_tab_"+k)}</button>`).join("")}</div>`;
-  const body=lbTab==="ranking"?lbRanking():lbTab==="all"?lbAll():lbTab==="pay"?lbPay(lbPilot||myId):lbPilotView(lbPilot||myId);
-  return`<div class="sec-head"><div><span class="eyebrow">${t("lb_eyebrow")}</span><h2>${t(lbTab==="ranking"?"lb_rank_title":lbTab==="all"?"lb_title":lbTab==="pay"?"pay_h2":"lb_mine_title")}</h2></div>${seg}</div>${body}`;
+  const seg=`<div class="seg" role="tablist">${["mine","pay","all"].map(k=>`<button data-action="lb-tab" data-v="${k}" aria-pressed="${lbTab===k}">${t("lb_tab_"+k)}</button>`).join("")}</div>`;
+  const body=lbTab==="all"?lbAll():lbTab==="pay"?lbPay(lbPilot||myId):lbPilotView(lbPilot||myId);
+  return`<div class="sec-head"><div><span class="eyebrow">${t("lb_eyebrow")}</span><h2>${t(lbTab==="all"?"lb_title":lbTab==="pay"?"pay_h2":"lb_mine_title")}</h2></div>${seg}</div>${body}`;
+}
+function viewRanking(){
+  if(!db)return offline();
+  return`<div class="sec-head"><div><span class="eyebrow">${t("lb_tab_ranking")}</span><h2>${t("lb_rank_title")}</h2></div></div>${lbRanking()}`;
 }
 function lbAll(){
   const nos=tlNumbers(),fl=[...data.flights].sort((a,b)=>b.createdAt-a.createdAt);
@@ -660,20 +677,96 @@ function acDetailHTML(id,inPanel){
    ${banner}
    ${upcoming.length?`<div class="notice">${t("sched_mx")} ${upcoming.map(w=>esc(t("from_to",{title:defTitle(w.d),s:fmt(w.s),e:fmt(w.e)}))).join("; ")}</div>`:""}
    <div class="stats"><span><b>${block(mins)}</b>${t("af_hours")}</span><span><b>${fl.length}</b>${t("cycles")}</span><span><b>${data.defects.filter(d=>d.aircraftId===id).length}</b>${t("defects_rep")}</span></div>
-   <div class="row"><button class="btn primary" data-action="go-roster" data-ac="${esc(id)}" ${canWrite===false?"disabled":""}>${t("rs_with_reg",{reg:esc(a.registration)})}</button>${IS_ADMIN()?`<button class="btn" data-action="new-booking" data-ac="${esc(id)}" ${canWrite===false?"disabled":""}>${t("book_reg",{reg:esc(a.registration)})}</button><button class="btn" data-action="ferry" data-ac="${esc(id)}" ${canWrite===false?"disabled":""} title="${esc(t("ferry_btn_t"))}">${t("ferry_btn")}</button>`:""}${favBtn(id,true)}</div>
+   <div class="row"><button class="btn primary" data-action="go-roster" data-ac="${esc(id)}" ${canWrite===false?"disabled":""}>${t(typeof flIsFree==="function"&&flIsFree()?"flight_with_reg":"rs_with_reg",{reg:esc(a.registration)})}</button>${IS_ADMIN()?`<button class="btn" data-action="new-booking" data-ac="${esc(id)}" ${canWrite===false?"disabled":""}>${t("book_reg",{reg:esc(a.registration)})}</button><button class="btn" data-action="ferry" data-ac="${esc(id)}" ${canWrite===false?"disabled":""} title="${esc(t("ferry_btn_t"))}">${t("ferry_btn")}</button>`:""}${favBtn(id,true)}</div>
    <div><h3 style="margin-bottom:6px">${t("log_pages")}</h3>${fl.length?`<div class="log">${fl.map(f=>entryHTML(f,nos[f.id],false)).join("")}</div>`:`<p class="muted" style="margin:0">${t("no_flights_reg")}</p>`}</div>`;
 }
+let aircraftTypeCatalog;
+function fillAircraftTypeOptions(list){
+  aircraftTypeCatalog ??= fetch("aircraft-types.json").then(async response=>{
+    if(!response.ok)throw new Error("Aircraft catalog unavailable");
+    const {types}=await response.json();
+    return types;
+  }).catch(error=>{
+    aircraftTypeCatalog=null;
+    throw error;
+  });
+  aircraftTypeCatalog.then(types=>{
+    if(!list.isConnected)return;
+    const options=document.createDocumentFragment();
+    for(const [manufacturer,model,code] of types){
+      const name=`${manufacturer} ${model}`;
+      const option=document.createElement("option");
+      option.value=[name,model].find(value=>[...value].length<=40)||[...model].slice(0,40).join("").trimEnd();
+      option.label=`${name} (${code})`;
+      options.append(option);
+    }
+    list.replaceChildren(options);
+  }).catch(error=>console.warn(error));
+}
+async function lookupAircraftType(registration,signal){
+  const key=regKey(registration);
+  const local=Object.values(fleetById).find(a=>regKey(a.registration)===key);
+  if(local?.type)return local.type;
+  const normalized=registration.replace(/^(PP|PR|PS|PT|PU)([A-Z]{3})$/,"$1-$2");
+  const response=await fetch("https://api.adsbdb.com/v0/aircraft/"+encodeURIComponent(normalized),{
+    signal,credentials:"omit",referrerPolicy:"no-referrer"
+  });
+  if(!response.ok)return "";
+  const aircraft=(await response.json()).response?.aircraft;
+  if(!aircraft||regKey(aircraft.registration)!==key)return "";
+  const model=String(aircraft.type||"").trim(),manufacturer=String(aircraft.manufacturer||"").trim();
+  const name=manufacturer&&!model.toUpperCase().startsWith(manufacturer.toUpperCase())?`${manufacturer} ${model}`.trim():model;
+  const code=String(aircraft.icao_type||"").trim();
+  return [model?name:"",model,code].find(value=>value&&value.length<=40)||"";
+}
+function bindAircraftTypeLookup(registration,type){
+  let timer,request,previousKey="",suggested="";
+  type.addEventListener("input",()=>{
+    clearTimeout(timer);
+    request?.abort();
+    suggested="";
+  });
+  registration.addEventListener("input",()=>{
+    const value=registration.value.trim().toUpperCase(),key=regKey(value);
+    if(key===previousKey)return;
+    previousKey=key;
+    clearTimeout(timer);
+    request?.abort();
+    if(suggested&&type.value===suggested)type.value="";
+    suggested="";
+    if(!AC_REG_RE.test(value)||key.length<2||type.value.trim())return;
+    timer=setTimeout(async()=>{
+      if(!registration.isConnected)return;
+      const controller=new AbortController();
+      request=controller;
+      const timeout=setTimeout(()=>controller.abort(),4500);
+      try{
+        const match=await lookupAircraftType(value,controller.signal);
+        if(match&&!controller.signal.aborted&&type.isConnected&&regKey(registration.value)===key&&!type.value.trim()){
+          type.value=suggested=match;
+        }
+      }catch(e){
+        // Keep the type editable when the registry is unavailable.
+      }finally{
+        clearTimeout(timeout);
+        if(request===controller)request=null;
+      }
+    },450);
+  });
+}
 function sheetNewAircraft(){
+  const freelancer=typeof flIsFree==="function"&&flIsFree();
   openSheet("form",`${head(t("fleet"),t("add_aircraft"))}
   <form id="f-ac">
    <div class="grid2"><label>${t("registration")}<input id="ac-reg" class="up" required maxlength="10" placeholder="PR-GOL" autocomplete="off" aria-describedby="ac-dup"></label>
-   <label>${t("ac_type")}<input id="ac-type" required maxlength="40" placeholder="Boeing 737-800"></label></div>
+   <label>${t("ac_type")}<input id="ac-type" list="ac-types" required maxlength="40" placeholder="Boeing 737-800 / B738" autocomplete="off"><datalist id="ac-types"></datalist></label></div>
    <p id="ac-dup" class="dup-note" role="status" hidden></p>
-   <div class="grid2"><label>${t("airline")}<input id="ac-airline" list="airline-list" maxlength="40" placeholder="${t("airline_ph")}"><datalist id="airline-list">${airlines().map(x=>`<option value="${esc(x)}">`).join("")}</datalist></label>
-   </div>
+   ${freelancer?"":`<div class="grid2"><label>${t("airline")}<input id="ac-airline" list="airline-list" maxlength="40" placeholder="${t("airline_ph")}"><datalist id="airline-list">${airlines().map(x=>`<option value="${esc(x)}">`).join("")}</datalist></label></div>`}
    <p class="form-err" id="ac-err" hidden></p>
-   <div class="row"><button class="btn primary" type="submit">${t("add_to_fleet")}</button><button class="btn" type="button" data-action="close">${t("cancel")}</button></div>
+   <div class="row ac-form-actions"><button class="btn primary" type="submit">${t("add_to_fleet")}</button><button class="btn" type="button" data-action="close">${t("cancel")}</button></div>
   </form>`);
+  fillAircraftTypeOptions($("#ac-types"));
+  bindAircraftTypeLookup($("#ac-reg"),$("#ac-type"));
 }
 /* ---------- Troca de aeronave quando uma reserva cai por manutenção ---------- */
 /* Famílias com a mesma filosofia de cabine / habilitação comum */
@@ -998,17 +1091,20 @@ async function submitAuth(form){
   const email=$("#au-email").value.trim(),pw=$("#au-pw").value;b.disabled=true;authMsg=null;
   try{
     if(authMode==="signup"){
+      const available=await window.checkSignupAvailability?.();
+      if(available===false||!form.isConnected||authMode!=="signup")return;
       const name=$("#au-name").value.trim();const sims=[...form.querySelectorAll('input[name="au-sim"]:checked')].map(i=>i.value);
       if(!sims.length){const m=form.querySelector("#au-sims-err");m.textContent=t("sims_required");m.hidden=false;form.querySelector(".sim-field").scrollIntoView&&form.querySelector(".sim-field").scrollIntoView({block:"center"});return}
       const pilot_mode=form.querySelector('input[name="au-mode"]:checked')?.value||null;const me=form.querySelector("#au-mode-err");if(me&&!pilot_mode){me.textContent=typeof ft==="function"?ft("fl_mode_req"):"";me.hidden=false;return}
       const {data:res,error}=await sb.auth.signUp({email,password:pw,options:{data:{display_name:name,sims,pilot_mode},emailRedirectTo:window.vfrNative?"https://flyvfr.com.br/":location.origin+location.pathname}});
+      if(error?.code==="signup_disabled"&&window.markSignupPaused){window.markSignupPaused();return}
       if(error)authMsg={ok:false,text:t("err_signup",{m:error.message})};
       else if(!res.session){authMsg={ok:true,text:t("check_email")};authMode="signin"}
     }else{
       const {error}=await sb.auth.signInWithPassword({email,password:pw});
       if(error)authMsg={ok:false,text:navigator.onLine?t("err_login"):t("err_net")};
     }
-  }finally{b.disabled=false}
+  }finally{b.disabled=b.hasAttribute("data-signup-paused")}
   render();
 }
 
@@ -1080,7 +1176,7 @@ function sheetConfirmed(r){
      <span>${fmtRange(r.start,r.end)}</span></div>
    <p class="muted" style="margin:0">${t("bk_done_sub")}</p>
    ${icaoType(a.type)?"":`<p class="hint" style="margin:0">${esc(t("sb_type_unknown",{type:a.type}))}</p>`}
-   <div class="row">${sbLink(r,"primary")}${svLink(r,"")}<button class="btn" type="button" data-action="close">${t("done")}</button></div>`);
+   <div class="row bk-confirm-actions">${sbLink(r,"primary")}${svLink(r,"")}<button class="btn" type="button" data-action="close">${t("done")}</button></div>`);
 }
 
 
@@ -1381,7 +1477,12 @@ function viewSupport(){
         <div class="grid2"><label>${t("sup_city")}<input id="sp-city" maxlength="40" value="${esc(st.pixCity)}" placeholder="Goiânia"></label>
         </div>
         <h3 style="margin:6px 0 0">${t("sup_other")}</h3><p class="hint" style="margin:0">${t("sup_links_hint")}</p>
-        <div class="grid2">${DONATE.map(d=>`<label>${esc(d.n)}<input class="sp-link" data-k="${d.k}" type="url" inputmode="url" maxlength="300" value="${esc((st.links||{})[d.k]||"")}" placeholder="https://"></label>`).join("")}</div>
+        <div class="support-links">${DONATE.map(d=>`<div class="support-link">
+          <button class="support-brand" type="button" data-action="sup-link-focus" data-k="${d.k}" aria-label="${esc(d.n)}" title="${esc(d.n)}">
+            <span class="support-brand-face"><img src="img/brand/support-${d.k}.svg" alt="" width="32" height="32"></span>
+          </button>
+          <input id="sp-link-${d.k}" class="sp-link" data-k="${d.k}" aria-label="${esc(d.n)}" type="url" inputmode="url" maxlength="300" value="${esc(links[d.k]||"")}" placeholder="https://">
+        </div>`).join("")}</div>
         <label>${t("sup_msg")} <span class="hint">${t("optional")}</span><textarea id="sp-msg" maxlength="600">${esc(st.message)}</textarea></label>
         <p class="form-err" id="sp-err" hidden></p>
         <div class="row"><button class="btn primary" type="submit">${t("sup_save")}</button></div>
@@ -1392,17 +1493,27 @@ function viewSupport(){
    <div class="sup-grid">${give}${otherHtml}</div>
    ${adminHtml}`;
 }
+function supportFormEditing(){
+  return [...document.querySelectorAll("#view #f-sup, #view #f-month")].some(form=>
+    [...form.querySelectorAll("input,textarea")].some(field=>field===document.activeElement||field.value!==field.defaultValue));
+}
+function supportFormSnapshot(form){
+  const fields=[...form.querySelectorAll("input,textarea")].map(field=>[field,field.value]);
+  return ()=>{for(const [field,value] of fields)field.defaultValue=value};
+}
 function supFillMonth(m){const r=getSupport().months.find(x=>x.month===m);$("#sm-month").value=m;$("#sm-cost").value=r?Number(r.cost):0;$("#sm-raised").value=r?Number(r.raised):0;$("#sm-note").value=r?r.note||"":"";$("#f-month").scrollIntoView({block:"center"})}
 async function submitSupport(form){
   const links={};for(const i of document.querySelectorAll(".sp-link")){const v=i.value.trim();if(!v)continue;if(!goodUrl(v))return err("#sp-err",t("sup_err_url",{n:DONATE.find(d=>d.k===i.dataset.k).n}));links[i.dataset.k]=v}
   const o={pixKey:$("#sp-key").value.trim(),pixHolder:$("#sp-holder").value.trim(),pixCity:$("#sp-city").value.trim(),links,message:$("#sp-msg").value.trim()};
   if(o.pixKey&&!o.pixHolder)return err("#sp-err",t("sup_err_holder"));
-  await busy(form,async()=>{await SUP_SAVE_SETTINGS(o);toast(t("sup_saved"));render()});
+  const commit=supportFormSnapshot(form);
+  await busy(form,async()=>{await SUP_SAVE_SETTINGS(o);commit();toast(t("sup_saved"));render()});
 }
 async function submitMonth(form){
   const m={month:$("#sm-month").value,cost:Math.max(0,Number($("#sm-cost").value)||0),raised:Math.max(0,Number($("#sm-raised").value)||0),note:$("#sm-note").value.trim()};
   if(!/^\d{4}-\d{2}$/.test(m.month))return err("#sm-err",t("sup_err_month"));
-  await busy(form,async()=>{await SUP_SAVE_MONTH(m);toast(t("sup_saved"));render()});
+  const commit=supportFormSnapshot(form);
+  await busy(form,async()=>{await SUP_SAVE_MONTH(m);commit();toast(t("sup_saved"));render()});
 }
 
 /* armazenamento da página de apoio: tabelas support_settings e support_months (só administradores alteram) */
@@ -1423,7 +1534,7 @@ async function SUP_SAVE_SETTINGS(o){const L=o.links||{},rest={};for(const k in L
   if(r.error&&/links/i.test(r.error.message||"")){delete row.links;r=await sb.from("support_settings").upsert(row);if(!r.error&&Object.keys(rest).length)toast(t("sup_links_sql"))}
   must(r);await loadSupport()}
 /* outras formas de doação: o administrador cola o link de cada plataforma */
-const DONATE=[{k:"paypal",n:"PayPal",c:"#003087",i:"P"},{k:"mercadopago",n:"Mercado Pago",c:"#00A1E4",i:"M"},{k:"livepix",n:"LivePix",c:"#7B2CF5",i:"L"},
+const DONATE=[{k:"paypal",n:"PayPal",c:"#003087",i:"P"},{k:"mercadopago",n:"Mercado Pago",c:"#00A1E4",i:"M"},
   {k:"bmc",n:"Buy Me a Coffee",c:"#FFDD00",i:"☕",ink:"#000000"}];
 const goodUrl=u=>/^https:\/\/[^\s"'<>]+\.[^\s"'<>]+$/i.test(String(u||"").trim());
 async function SUP_SAVE_MONTH(m){must(await sb.from("support_months").upsert({month:m.month+"-01",cost:m.cost,raised:m.raised,note:m.note}));await loadSupport()}
@@ -1671,7 +1782,7 @@ body:`
 <p>A associação aeroportuária é pelo indicativo: não se presume que uma APP/Centro cubra outro aeródromo. O marcador não representa extensão do setor. <b>CID e VID são informados pelo piloto e não verificam identidade.</b> Não há login nas redes por esse campo; conecte pelo cliente do simulador. A detecção na rede não valida reportes, não concede horas e não substitui o rastreamento exigido pelo app.</p></section>
 
 <section id="m-diario"><h3>Diário de bordo, salário e catálogo</h3>
-<p>Em <b>Diário de bordo → Meu logbook</b> ficam as suas horas: total, últimos 30 dias, este ano, horas por tipo de aeronave, companhia e simulador, matrículas mais voadas (nas cores da companhia, com o modelo ao lado) e a lista de voos, com <b>Exportar CSV</b> para planilha. As horas vêm do tempo de calço de cada reporte. Em <b>Salário</b> há uma simulação fictícia de contracheque: pagamento por hora de voo conforme a patente e a categoria da aeronave, mais diárias de pernoite. O valor é definido em dólar e convertido para a moeda escolhida pela <b>cotação do dia de cada voo</b> (coluna Cotação). <b>Ranking de pilotos</b> compara as horas do grupo (total, este ano ou 30 dias); toque num piloto para ver o logbook dele. <b>Todos os registros</b> reúne todos os voos reportados, com número sequencial por aeronave (TL 0001…), rota, piloto, simulador, tempo de calço e falhas. O <b>Catálogo de falhas</b> traz as 123 falhas padrão por capítulo ATA, com ação padrão, tempo médio de reparo, prazo MEL e procedimento.</p></section>
+<p>Em <b>Diário de bordo → Meu logbook</b> ficam as suas horas: total, últimos 30 dias, este ano, horas por tipo de aeronave, companhia e simulador, matrículas mais voadas (nas cores da companhia, com o modelo ao lado) e a lista de voos, com <b>Exportar CSV</b> para planilha. As horas vêm do tempo de calço de cada reporte. Em <b>Salário</b> há uma simulação fictícia de contracheque: pagamento por hora de voo conforme a patente e a categoria da aeronave, mais diárias de pernoite. O valor é definido em dólar e convertido para a moeda escolhida pela <b>cotação do dia de cada voo</b> (coluna Cotação). No menu <b>Ranking</b>, compare as horas do grupo (total, este ano ou 30 dias); toque num piloto para ver o logbook dele. <b>Todos os registros</b> reúne todos os voos reportados, com número sequencial por aeronave (TL 0001…), rota, piloto, simulador, tempo de calço e falhas. O <b>Catálogo de falhas</b> traz as 123 falhas padrão por capítulo ATA, com ação padrão, tempo médio de reparo, prazo MEL e procedimento.</p></section>
 
 <section id="m-apoie"><h3>Apoie o projeto</h3>
 <p>O app é gratuito. Na aba <b>Apoie</b>, doe pelo QR Code Pix, pelo Pix copia e cola ou pelas outras formas listadas (cartão, PayPal e outras), no valor que quiser.</p></section>
@@ -1791,7 +1902,7 @@ body:`
 <p><b>IDs are self-declared, not verified identities.</b> These fields do not sign in to the networks: use the simulator's network client. Network detection does not validate flight reports, grant hours or replace required app tracking.</p></section>
 
 <section id="m-diario"><h3>Logbook, pay and defect catalog</h3>
-<p><b>Logbook → My logbook</b> shows your hours: total, last 30 days, this year, hours by aircraft type, airline and simulator, most flown registrations (in airline colors, with the model alongside) and the flight list, with <b>Export CSV</b> for spreadsheets. Hours come from the block time of each report. <b>Pay</b> is a fictional payslip: per flight hour by rank and aircraft category, plus layover per diems. Amounts are set in US dollars and converted to the chosen currency at the <b>exchange rate of each flight’s date</b> (Rate column). <b>Pilot ranking</b> compares the group (all time, this year or 30 days); tap a pilot to see their logbook. <b>All entries</b> lists every reported flight with a sequential page per aircraft (TL 0001…), route, pilot, simulator, block time and defects. The <b>Defect catalog</b> holds the 123 standard defects by ATA chapter, with default action, average repair time, MEL limit and procedure.</p></section>
+<p><b>Logbook → My logbook</b> shows your hours: total, last 30 days, this year, hours by aircraft type, airline and simulator, most flown registrations (in airline colors, with the model alongside) and the flight list, with <b>Export CSV</b> for spreadsheets. Hours come from the block time of each report. <b>Pay</b> is a fictional payslip: per flight hour by rank and aircraft category, plus layover per diems. Amounts are set in US dollars and converted to the chosen currency at the <b>exchange rate of each flight’s date</b> (Rate column). In the <b>Ranking</b> menu, compare pilots (all time, this year or 30 days); tap a pilot to see their logbook. <b>All entries</b> lists every reported flight with a sequential page per aircraft (TL 0001…), route, pilot, simulator, block time and defects. The <b>Defect catalog</b> holds the 123 standard defects by ATA chapter, with default action, average repair time, MEL limit and procedure.</p></section>
 
 <section id="m-apoie"><h3>Support the project</h3>
 <p>The app is free. In the <b>Support</b> tab you can donate by Pix QR code, Pix copy-and-paste code or the other options listed (card, PayPal and more), any amount.</p></section>
@@ -1808,11 +1919,13 @@ body:`
 <tr><td>A new app feature doesn't show</td><td>On a PC press <b>Ctrl+Shift+R</b>; on a phone close and reopen the app</td></tr>
 <tr><td>I'm offline</td><td>The app opens with the last data, read-only; bookings and reports need a connection</td></tr></tbody></table></div></section>`}
 };
+let manualTopic="";
 function viewManual(){
   const m=MANUAL[lang]||MANUAL.en;
   const note=MANUAL[lang]?"":`<div class="notice">${t("man_lang_note")}</div>`;
+  const topics=[["m-dispatch",t("man_dispatch_title")],...m.toc];
   return`<div class="sec-head"><div><span class="eyebrow">${t("man_eyebrow")}</span><h2>${t("man_title")}</h2></div></div>${note}
-   <nav class="man-toc" aria-label="${t("man_toc")}"><button data-action="man-jump" data-to="m-dispatch">${t("man_dispatch_title")}</button>${m.toc.map(([id,l])=>`<button data-action="man-jump" data-to="${id}">${esc(l)}</button>`).join("")}</nav>
+   <nav class="man-toc" aria-label="${t("man_toc")}">${topics.map(([id,label])=>`<button type="button" data-action="man-jump" data-to="${id}" aria-current="${id===manualTopic?"location":"false"}">${esc(label)}</button>`).join("")}</nav>
    <div class="panel manual"><section id="m-dispatch"><h3>${t("man_dispatch_title")}</h3><p>${t("man_dispatch_confirm")}</p><ul><li>${t("man_dispatch_simbrief")}</li><li>${t("man_dispatch_skyvector")}</li></ul><p class="muted">${t("man_dispatch_note")}</p></section>${m.body}</div>`;
 }
 
@@ -1855,12 +1968,13 @@ function dbMessage(e,reg){
   if(e&&(e.code==="42501"||/row-level security/.test(m)))return t("err_perm");
   return t("err_save");
 }
-async function busy(form,fn,reg){const b=form.querySelector('button[type="submit"]');b.disabled=true;
-  try{await fn()}catch(e){console.error(e);const p=form.querySelector(".form-err");if(p){p.textContent=dbMessage(e,reg);p.hidden=false}}finally{b.disabled=false}}
+async function busy(form,fn,reg){const b=form.querySelector('button[type="submit"]');b.disabled=true;form.setAttribute("aria-busy","true");
+  try{await fn()}catch(e){console.error(e);const p=form.querySelector(".form-err");if(p){p.textContent=dbMessage(e,reg);p.hidden=false}}finally{b.disabled=false;form.removeAttribute("aria-busy")}}
 const must=({error})=>{if(error)throw error};
 
 /* matrícula sem hífen/espaço, para achar PR-GUK mesmo se digitarem PRGUK */
 const regKey=r=>String(r||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+const AC_REG_RE=/^[A-Z0-9][A-Z0-9-]{1,9}$/;
 function findDupLocal(reg){const k=regKey(reg);return k?fleet.find(a=>regKey(a.registration)===k)||null:null}
 async function findDupRemote(reg){const k=regKey(reg);if(!k||!sb)return null;
   const {data,error}=await sb.from("aircraft").select("registration,type,airline").ilike("registration",k.split("").join("%"));
@@ -1869,8 +1983,8 @@ function paintDupNote(){const i=$("#ac-reg"),n=$("#ac-dup"),b=document.querySele
   const d=findDupLocal(i.value);n.hidden=!d;if(b)b.disabled=!!d;
   n.innerHTML=d?`${t("err_dup_live",{reg:`<b>${esc(d.registration)}</b>`,type:esc(d.type||""),airline:esc(d.airline||"")})} <button type="button" class="linkish" data-action="open-aircraft" data-id="${esc(d.registration)}">${t("open_log")}</button>`:""}
 async function submitAircraft(form){
-  const reg=$("#ac-reg").value.trim().toUpperCase(),type=$("#ac-type").value.trim(),airline=$("#ac-airline").value.trim();
-  if(!/^[A-Z0-9][A-Z0-9-]{1,9}$/.test(reg))return err("#ac-err",t("err_reg"));
+  const reg=$("#ac-reg").value.trim().toUpperCase(),type=$("#ac-type").value.trim(),airline=$("#ac-airline")?.value.trim()||"";
+  if(!AC_REG_RE.test(reg))return err("#ac-err",t("err_reg"));
   const dupL=findDupLocal(reg);if(dupL)return err("#ac-err",t("err_dup",{reg:dupL.registration}));
   await busy(form,async()=>{const dupR=await findDupRemote(reg);if(dupR){await load("aircraft");render();throw {vfrDup:dupR.registration}}
     must(await sb.from("aircraft").insert({registration:reg,type,airline,created_by:myId}));
@@ -1887,7 +2001,9 @@ function myClash(s,e,o){o=o||{};const mine=data.reservations.filter(r=>r.pilotId
   return null}
 const myClashMsg=r=>{const a=acById(r.aircraftId);return r.spanS?t("err_mine_roster",{reg:esc(a?.registration||r.aircraftId),s:fmt(r.spanS),e:fmt(r.spanE)}):t("err_mine",{reg:esc(a?.registration||r.aircraftId),dep:esc(r.dep),arr:esc(r.arr),s:fmt(r.start),e:fmtT(r.end)})};
 async function submitBooking(form){
+  if(form.getAttribute("aria-busy")==="true")return;
   const acId=$("#bk-ac").value,a=acById(acId),dep=apResolve($("#bk-dep").value),arr=apResolve($("#bk-arr").value),flightNo=normFno($("#bk-fno").value);
+  if(!a)return err("#bk-err",t("acp_pick"));
   if(flightNo&&!FNO_RE.test(flightNo))return err("#bk-err",t("err_fno"));
   const start=new Date($("#bk-start").value).getTime(),end=start+Number($("#bk-dur").value)*H;
   if(bkNeedsAck()&&!$("#bk-ack").checked)return err("#bk-err",t("bk_sign_first"));
@@ -1960,7 +2076,10 @@ async function submitReport(form){
 document.addEventListener("click",async e=>{
   if(e.target.closest("a.ac-photo,a.photo-link"))return;
   const el=e.target.closest("[data-view],[data-action]");if(!el)return;
-  if(el.dataset.view){if(el.dataset.view==='roster'&&rosterMenuLocked())return showRosterLocked();view=el.dataset.view;if(view==='bookings')PROGRAMMING_SECTIONS.add(myId+':calendar');closeSheet();render();if(view==="fleet")fleetOpenHomeRegion();else fleetGeoVersion++;return}
+  if(el.dataset.view){if(el.dataset.view==='roster'){
+    if(rosterMenuLocked())return showRosterLocked();
+    if(el.dataset.free==='1')rsSetMode(true);
+  }view=el.dataset.view;if(view==='bookings')PROGRAMMING_SECTIONS.add(myId+':calendar');closeSheet();render();if(view==="fleet")fleetOpenHomeRegion();else fleetGeoVersion++;return}
   const a=el.dataset.action;
   if(a==="scrim"){if(e.target===el)closeSheet();return}
   if(a==="close")return closeSheet();
@@ -1988,7 +2107,7 @@ document.addEventListener("click",async e=>{
   if(a==="f-fav"){fleetGeoVersion++;fFav=!fFav;fLimit=60;return render()}
   if(a==="lb-tab"){lbTab=el.dataset.v;if(lbTab==="mine")lbPilot=null;return render()}
   if(a==="lb-period"){lbPeriod=el.dataset.v;return render()}
-  if(a==="lb-pilot"){lbTab="mine";lbPilot=el.dataset.p;window.scrollTo&&window.scrollTo(0,0);return render()}
+  if(a==="lb-pilot"){view="logbook";lbTab="mine";lbPilot=el.dataset.p;window.scrollTo&&window.scrollTo(0,0);return render()}
   if(a==="lb-me"){lbPilot=null;return render()}
   if(a==="lb-csv")return lbCsv(el.dataset.p);
   if(a==="cal-prev"||a==="cal-next"){const d=new Date(calY,calM+(a==="cal-next"?1:-1),1);calY=d.getFullYear();calM=d.getMonth();calSel=null;return render()}
@@ -1998,8 +2117,18 @@ document.addEventListener("click",async e=>{
   if(a==="ap-pick"){const inp=document.getElementById(el.dataset.for);if(inp)apPick(inp,el.dataset.icao);return}
   if(a==="fav"){e.stopPropagation();return toggleFav(el.dataset.id)}
   if(a==="more"){fLimit+=60;return render()}
-  if(a==="man-jump"){const x=document.getElementById(el.dataset.to);if(x)x.scrollIntoView({behavior:"smooth",block:"start"});return}
+  if(a==="man-jump"){
+    const topic=document.getElementById(el.dataset.to);
+    if(!topic)return;
+    manualTopic=topic.id;
+    document.querySelectorAll('.man-toc [data-action="man-jump"]').forEach(button=>{
+      button.setAttribute("aria-current",button.dataset.to===manualTopic?"location":"false");
+    });
+    topic.scrollIntoView({behavior:"smooth",block:"start"});
+    return;
+  }
   if(a==="copy"){copyText(el.dataset.copy,el);return}
+  if(a==="sup-link-focus"){$("#sp-link-"+el.dataset.k)?.focus();return}
   if(a==="sup-edit"){supFillMonth(el.dataset.m);return}
   if(a==="sup-del"){const m=$("#sm-month").value;if(!m)return;
     if(!el.dataset.armed){el.dataset.armed="1";el.textContent=t("sup_confirm_del");setTimeout(()=>{if(el.isConnected){delete el.dataset.armed;el.textContent=t("sup_delete_month")}},4000);return}
@@ -2047,7 +2176,7 @@ function setSession(s){
   session=s;{const nid=s?.user?.id||null;if(nid!==myId&&typeof resetAcks==="function")resetAcks()}myId=s?.user?.id||null;canWrite=s?true:null;db=s?sb:null;
   if(s)subscribe();
 }
-function clearData(){favs=new Set();fFav=false;favStart=false;try{EVENTS=[];BLOCKED=new Map();meBlocked=false;isAdmin=false}catch(e){}for(const k of ["aircraft","reservations","flights","defects"])data[k]=[];loaded.aircraft=false;fleet=[];fleetById={};
+function clearData(){favs=new Set();fFav=false;favStart=false;storeErrors.clear();loadRequests.clear();try{EVENTS=[];BLOCKED=new Map();meBlocked=false;isAdmin=false}catch(e){}for(const k of ["aircraft","reservations","flights","defects"])data[k]=[];loaded.aircraft=false;fleet=[];fleetById={};
   try{localStorage.removeItem("vfr-cache")}catch(e){} if(channel){sb.removeChannel(channel);channel=null}}
 (async()=>{
   if(!configured){booting=false;render();return}
@@ -2078,21 +2207,18 @@ function sheetInstall(){
     ${order.map((k,i)=>`<div class="panel inst-step${i?"":" first"}"><h3 style="margin:0 0 6px">${t("install_"+k+"_h")}</h3><ol style="margin:0;padding-left:20px;display:grid;gap:4px">${t("install_"+k).split("|").map(x=>`<li>${x}</li>`).join("")}</ol></div>`).join("")}
     <div class="row"><button class="btn" data-action="close">${t("close")}</button></div></div>`);
 }
-/* no Windows, o botão baixa o instalador (.exe); nos outros sistemas, instala pelo navegador */
-/* app de Windows (Electron): instalador publicado no GitHub Releases — atualize o nome a cada versão */
-const EXE_URL="https://github.com/richardsonsouto/flyvfr-desktop/releases/latest/download/VirtualFlightReport-Desktop-Setup-3.0.0.exe";
+/* A página da versão lista os arquivos do instalador Windows. */
+const EXE_URL="https://github.com/richardsonsouto/flyvfr-desktop/releases/latest";
 const isWinPC=()=>/Windows NT/i.test(navigator.userAgent)&&!/Mobile|Phone/i.test(navigator.userAgent);
-function downloadExe(){const a=document.createElement("a");a.href=EXE_URL;a.download="VirtualFlightReport-Desktop-Setup.exe";document.body.appendChild(a);a.click();a.remove()}
 function sheetInstallExe(){
   openSheet("form",`${head(t("install_eb"),t("install_h"))}<div style="display:grid;gap:14px">
-    <div class="notice ok">⬇ ${t("install_exe_started")}</div>
     <div class="panel inst-step first"><h3 style="margin:0 0 6px">${t("install_exe_h")}</h3><ol style="margin:0;padding-left:20px;display:grid;gap:6px">${t("install_exe_steps").split("|").map(x=>`<li>${x}</li>`).join("")}</ol></div>
     <p class="hint" style="margin:0">${t("install_exe_note")}</p>
-    <div class="row"><a class="btn" style="text-decoration:none" href="${EXE_URL}" download="VirtualFlightReport-Desktop-Setup.exe">${t("install_exe_again")}</a><button class="btn" type="button" data-action="install-browser">${t("install_or_browser")}</button><button class="btn" data-action="close">${t("close")}</button></div></div>`)}
+    <div class="row"><a class="btn" style="text-decoration:none" href="${EXE_URL}" target="_blank" rel="noopener">${t("install_exe_release")}</a><button class="btn" type="button" data-action="install-browser">${t("install_or_browser")}</button><button class="btn" data-action="close">${t("close")}</button></div></div>`)}
 document.addEventListener("click",async e=>{
   if(e.target.closest('[data-action="install-browser"]')){if(installPrompt){const p=installPrompt;installPrompt=null;closeSheet();try{p.prompt()}catch(x){}return}return sheetInstall()}
   if(!e.target.closest('[data-action="pc-install"]'))return;
-  if(isWinPC()){downloadExe();sheetInstallExe();return}
+  if(isWinPC()){sheetInstallExe();return}
   if(installPrompt){const p=installPrompt;installPrompt=null;try{p.prompt();const r=await p.userChoice;if(r&&r.outcome==="accepted"){paintChrome();return}}catch(x){}paintMe();return}
   sheetInstall()});
 /* (mais rápido) o cache offline (~6 MB na 1ª visita) só começa a baixar depois que a página abriu, sem disputar a internet com os dados */

@@ -16,6 +16,8 @@
 .fl-bar-top{justify-content:flex-end;margin-bottom:8px}
 .fl-leg{border:1px solid var(--line,#2a3442);border-radius:12px;padding:10px 14px 4px;margin:0;display:flex;flex-direction:column;gap:10px}
 .fl-leg legend{font-weight:600;padding:0 6px;display:flex;gap:8px;align-items:center}
+.fl-route-fields label{grid-template-rows:auto 1fr;min-width:0}
+.fl-route-fields input{align-self:end}
 .fl-leg-x{font-size:.85rem}
 .fl-add{align-self:flex-start}
 
